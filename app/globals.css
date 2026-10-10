@@ -202,17 +202,6 @@ button { color: inherit; }
 .room-title-actions { display: flex; align-items: center; gap: 9px; }
 .privacy-toggle, .invite-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 35px; padding: 0 12px; border: 1px solid var(--mk-line); border-radius: 999px; background: rgba(255,255,255,.025); color: #cbd3cc; font-size: 11px; cursor: pointer; }
 .invite-button { border-color: var(--mk-lime); background: var(--mk-lime); color: #1a2118; font-weight: 750; }
-.room-search { height: 43px; display: flex; align-items: center; gap: 10px; padding: 0 7px 0 14px; border: 1px solid rgba(224,235,217,.14); border-radius: 13px; background: rgba(244,247,231,.055); color: #98a6a0; }
-.room-search > svg { flex: 0 0 auto; }
-.room-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--mk-copy); font-size: 12px; }
-.room-search input::placeholder { color: #7f8d87; }
-.duration-hint { flex: 0 0 auto; padding: 3px 7px; border: 1px solid rgba(214,248,121,.19); border-radius: 6px; color: var(--mk-lime); font-size: 9px; font-weight: 700; }
-.room-search > button { display: grid; place-items: center; width: 31px; height: 31px; flex: 0 0 auto; border: 0; border-radius: 9px; background: var(--mk-lime); color: #1b2119; cursor: pointer; }
-.search-footnote { min-height: 31px; display: flex; align-items: center; gap: 14px; padding: 0 4px; color: #77857e; font-size: 10px; }
-.search-footnote > span:first-child { color: #b8c4bb; font-weight: 650; }
-.search-footnote button { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: transparent; color: #a9b6aa; font-size: 10px; cursor: pointer; }
-.supported-note { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; }
-.supported-note svg { color: var(--mk-lime); }
 .room-grid { display: grid; grid-template-columns: minmax(0, 1fr) 312px; align-items: start; gap: 18px; padding-top: 7px; }
 .watch-column { min-width: 0; }
 .media-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 240px; overflow: hidden; border: 1px solid rgba(255,255,255,.09); border-radius: 17px; background: #182326; isolation: isolate; }
@@ -292,8 +281,6 @@ button { color: inherit; }
   .header-nav { gap: 2px; }.nav-item { width: 34px; height: 34px; justify-content: center; gap: 0; padding: 0; font-size: 0; }.nav-item svg { width: 16px; height: 16px; }
   .header-actions { gap: 9px; }.header-round { width: 32px; height: 32px; }.account-trigger { gap: 0; }.account-name, .account-trigger > svg { display: none; }.tiny-avatar { width: 30px; height: 30px; }
   .room-content { width: calc(100% - 24px); }.room-titlebar { align-items: center; padding: 17px 0 12px; }.room-kicker { gap: 6px; font-size: 7px; letter-spacing: .9px; }.room-titlebar h1 { margin-top: 6px; font-size: 23px; }.privacy-toggle { height: 31px; padding: 0 8px; font-size: 9px; }.privacy-toggle svg { width: 12px; }.privacy-toggle > svg:last-child { display: none; }.invite-button { width: 33px; height: 33px; padding: 0; }.invite-button span { display: none; }
-  .room-search { height: 40px; gap: 8px; padding-left: 11px; border-radius: 11px; }.room-search input { font-size: 11px; }.room-search input::placeholder { font-size: 10px; }.duration-hint { padding: 3px 5px; font-size: 8px; }.room-search > button { width: 29px; height: 29px; }
-  .search-footnote { min-height: 29px; gap: 10px; font-size: 9px; }.search-footnote button { gap: 3px; font-size: 9px; }.supported-note { font-size: 8px; }.supported-note svg { width: 11px; }
   .room-grid { display: block; padding-top: 2px; }.media-stage { min-height: 195px; aspect-ratio: 16 / 9; border-radius: 13px; }.stage-film-info { left: 17px; width: 58%; }.stage-film-info h2 { margin-top: 6px; font-size: clamp(21px, 6.3vw, 29px); }.stage-film-info p { max-width: 165px; font-size: 9px; }.stage-film-info > span { font-size: 7px; }.film-tags { gap: 5px; margin-top: 9px; }.film-tags span { padding: 4px 6px; font-size: 8px; }.stage-play-button { width: 43px; height: 43px; }.stage-play-button svg { width: 19px; }.stage-topbar { top: 9px; left: 9px; right: 9px; }.stage-live, .stage-quality { gap: 5px; padding: 5px 7px; font-size: 7px; }.stage-controls { right: 8px; bottom: 10px; left: 8px; }.stage-control-group { gap: 5px; }.stage-controls button { width: 24px; height: 24px; }.stage-controls button svg { width: 13px; }.stage-time { font-size: 8px; }.stage-progress { right: 11px; bottom: 6px; left: 11px; width: calc(100% - 22px); height: 2px; }
   .media-caption { min-height: 61px; gap: 9px; padding: 8px 1px; }.media-caption-art { width: 38px; height: 38px; border-radius: 9px; }.media-caption-copy > span { font-size: 7px; letter-spacing: .55px; }.media-caption-copy strong { font-size: 11px; }.media-caption-copy small { font-size: 9px; }.save-button { gap: 4px; padding: 7px; font-size: 9px; }.save-button svg { width: 14px; }
   .member-peek { min-height: 55px; gap: 9px; }.peek-avatar { width: 26px; height: 26px; font-size: 9px; }.member-peek > button strong { font-size: 9px; }.member-peek > button span { font-size: 8px; }.member-peek .peek-more { width: 27px; height: 27px; }
@@ -307,7 +294,7 @@ button { color: inherit; }
 }
 
 @media (max-width: 360px) {
-  .app-header { padding: 0 11px; }.room-content { width: calc(100% - 20px); }.room-titlebar h1 { font-size: 21px; }.search-footnote { gap: 7px; }.supported-note { font-size: 7px; }.supported-note svg { display: none; }.stage-film-info { left: 13px; width: 62%; }.stage-film-info h2 { font-size: 20px; }.stage-film-info p { max-width: 130px; }.stage-attribution { display: none; }.control-item { min-width: 38px; padding: 0 2px; }.room-panel { right: 8px; left: 8px; }
+  .app-header { padding: 0 11px; }.room-content { width: calc(100% - 20px); }.room-titlebar h1 { font-size: 21px; }.stage-film-info { left: 13px; width: 62%; }.stage-film-info h2 { font-size: 20px; }.stage-film-info p { max-width: 130px; }.stage-attribution { display: none; }.control-item { min-width: 38px; padding: 0 2px; }.room-panel { right: 8px; left: 8px; }
 }
 
 .language-round { gap: 4px; width: auto; padding: 0 9px; border-radius: 999px; font-size: 9px; }

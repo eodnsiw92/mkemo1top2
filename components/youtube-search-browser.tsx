@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import useSWR from 'swr'
 import { ArrowLeft, LoaderCircle, Play, RefreshCw, Search } from 'lucide-react'
 import { containsProhibitedSearch } from '@/lib/content-safety'
+import { getPlayableSourceFromInput, isMediaUrlInput } from '@/lib/media-url'
 
 export type YouTubeSearchResult = {
   id: string
@@ -25,6 +26,7 @@ type YouTubeSearchBrowserProps = {
   initialQuery: string
   onBack: () => void
   onPlay: (video: YouTubeSearchResult) => void
+  onPlayLink: (url: string) => void
 }
 
 async function fetchYouTubeResults(url: string): Promise<YouTubeSearchResponse> {
@@ -36,10 +38,10 @@ async function fetchYouTubeResults(url: string): Promise<YouTubeSearchResponse> 
   return payload
 }
 
-export function YouTubeSearchBrowser({ locale, initialQuery, onBack, onPlay }: YouTubeSearchBrowserProps) {
+export function YouTubeSearchBrowser({ locale, initialQuery, onBack, onPlay, onPlayLink }: YouTubeSearchBrowserProps) {
   const isArabic = locale === 'ar'
   const [input, setInput] = useState(initialQuery)
-  const [submittedQuery, setSubmittedQuery] = useState(initialQuery.trim())
+  const [submittedQuery, setSubmittedQuery] = useState(() => isMediaUrlInput(initialQuery) ? '' : initialQuery.trim())
   const [queryError, setQueryError] = useState('')
   const requestUrl = submittedQuery
     ? `/api/search?source=YouTube&format=json&query=${encodeURIComponent(submittedQuery)}`
@@ -59,6 +61,16 @@ export function YouTubeSearchBrowser({ locale, initialQuery, onBack, onPlay }: Y
       setQueryError(isArabic ? 'هذا البحث غير مسموح.' : 'This search is not allowed.')
       return
     }
+    if (isMediaUrlInput(value)) {
+      const playable = getPlayableSourceFromInput(value)
+      if (!playable) {
+        setQueryError(isArabic ? 'الرابط غير مدعوم. استخدم HTTPS ورابط فيديو أو منصة مدعومة.' : 'That link is not supported. Use HTTPS and a direct video or supported player URL.')
+        return
+      }
+      setQueryError('')
+      onPlayLink(playable.url)
+      return
+    }
     setQueryError('')
     setSubmittedQuery(value)
   }
@@ -67,7 +79,7 @@ export function YouTubeSearchBrowser({ locale, initialQuery, onBack, onPlay }: Y
     <section className="youtube-browser" dir={isArabic ? 'rtl' : 'ltr'} aria-label={isArabic ? 'بحث يوتيوب' : 'YouTube search'}>
       <div className="youtube-browser-content">
         <div className="youtube-browser-heading">
-          <button className="youtube-browser-back" type="button" onClick={onBack} aria-label={isArabic ? 'العودة إلى البحث' : 'Back to search'}>
+          <button className="youtube-browser-back" type="button" onClick={onBack} aria-label={isArabic ? 'العودة إلى الشاشة السابقة' : 'Back to previous screen'}>
             <ArrowLeft size={18} />
           </button>
           <span className="youtube-browser-brand" aria-hidden="true"><Play size={25} fill="currentColor" /></span>
@@ -90,8 +102,8 @@ export function YouTubeSearchBrowser({ locale, initialQuery, onBack, onPlay }: Y
             onKeyDown={(event) => {
               if (event.key === 'Enter' && (event.nativeEvent.isComposing || event.keyCode === 229)) event.preventDefault()
             }}
-            placeholder={isArabic ? 'ابحث عن فيديوهات يوتيوب' : 'Search YouTube videos'}
-            aria-label={isArabic ? 'ابحث في يوتيوب' : 'Search YouTube'}
+            placeholder={isArabic ? 'ابحث في يوتيوب أو الصق رابط فيديو' : 'Search YouTube or paste a video link'}
+            aria-label={isArabic ? 'ابحث في يوتيوب أو الصق رابط فيديو' : 'Search YouTube or paste a video link'}
             autoComplete="off"
             autoFocus={Boolean(initialQuery)}
           />
@@ -152,7 +164,7 @@ export function YouTubeSearchBrowser({ locale, initialQuery, onBack, onPlay }: Y
           </div>
         )}
 
-        <p className="youtube-browser-footnote">{isArabic ? 'يعمل الفيديو عبر مشغل يوتيوب الرسمي.' : <>Playback uses YouTube&apos;s official player.</>}</p>
+        <p className="youtube-browser-footnote">{isArabic ? 'ألصق رابط YouTube أو فيديو مباشر آمنًا لبدء المشاهدة المتزامنة مع أصدقائك.' : 'Paste a YouTube or secure direct video link to start watching in sync with friends.'}</p>
       </div>
     </section>
   )
