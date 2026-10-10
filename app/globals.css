@@ -580,7 +580,7 @@ button { color: inherit; }
   .media-hub-section-heading > span { max-width: 58px; text-align: end; }
 }
 
-.country-flag { display: inline-block; margin-inline-start: .38em; font-family: system-ui, sans-serif; font-size: 1em; line-height: 1; vertical-align: -0.04em; }
+.country-flag { display: inline-block; margin-inline-start: .38em; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, sans-serif; font-size: 1em; line-height: 1; vertical-align: -0.04em; }
 .chat-user-name { font-weight: 650; }
 
 .profile-view.profile-dashboard { width: min(1120px, calc(100% - 48px)); margin: 24px auto 56px; color: var(--mk-copy); }
@@ -760,8 +760,8 @@ button { color: inherit; }
 .profile-rave-name { min-width: 0; }
 .profile-rave-name h1 { margin: 0 0 6px; overflow: hidden; color: #fff; font-size: 24px; font-weight: 800; letter-spacing: -.5px; text-overflow: ellipsis; white-space: nowrap; }
 .profile-rave-name > div { display: flex; align-items: center; gap: 9px; color: rgba(247,243,255,.86); font-size: 14px; font-weight: 650; }
-.profile-rave .profile-country-name { padding: 4px 7px; border: 1px solid rgba(255,255,255,.16); border-radius: 7px; background: rgba(255,255,255,.12); font-size: 18px; }
-.profile-rave .profile-country-name .country-flag { margin: 0; }
+.profile-rave .profile-country-name { display: inline-flex; align-items: center; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: inherit; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, sans-serif; font-size: 20px; line-height: 1; }
+.profile-rave .profile-country-name .country-flag { margin: 0; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, sans-serif; font-size: 1em; }
 .profile-rave-head-actions { display: flex; gap: 7px; }
 .profile-rave-icon-button { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; background: rgba(255,255,255,.09); color: #fff; cursor: pointer; }
 .profile-rave-icon-button svg { width: 16px; height: 16px; }
