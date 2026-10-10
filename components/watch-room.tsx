@@ -44,23 +44,10 @@ type Panel = 'people' | 'chat' | 'sources' | null
 
 const services = ['YouTube', 'Netflix', 'Prime Video', 'Disney+', 'Twitch']
 
-function youtubeId(value: string) {
-  const candidate = /^https?:\/\//i.test(value) ? value : `https://${value}`
-  const source = getPlayableSource(candidate)
-  return source?.kind === 'youtube' ? source.id : ''
-}
-
-function videoFile(value: string) {
-  const candidate = /^https?:\/\//i.test(value) ? value : `https://${value}`
-  const source = getPlayableSource(candidate)
-  return source?.kind === 'direct' ? source.url : ''
-}
-
 export function WatchRoom() {
   const [query, setQuery] = useState('')
   const [source, setSource] = useState('YouTube')
-  const [videoId, setVideoId] = useState('')
-  const [directVideo, setDirectVideo] = useState('')
+  const [mediaUrl, setMediaUrl] = useState('')
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(false)
   const [time, setTime] = useState(0)
@@ -109,25 +96,29 @@ export function WatchRoom() {
 
   useEffect(() => {
     const shared = roomFeed?.room
-    if (!activeRoomId || !shared?.mediaUrl) return
+    if (!activeRoomId || !shared) return
+    if (!shared.mediaUrl) {
+      const emptyPlaybackKey = `${activeRoomId}:empty:${shared.playbackUpdatedAt}`
+      if (appliedPlaybackRef.current === emptyPlaybackKey) return
+      setMediaUrl('')
+      setTime(0)
+      setDuration(0)
+      setPlaying(false)
+      setSource(shared.source)
+      appliedPlaybackRef.current = emptyPlaybackKey
+      return
+    }
     const playbackKey = `${activeRoomId}:${shared.mediaUrl}:${shared.playbackUpdatedAt}`
     if (appliedPlaybackRef.current === playbackKey) return
     const playable = getPlayableSource(shared.mediaUrl)
     if (!playable) return
-    if (playable.kind === 'youtube') {
-      setVideoId(playable.id)
-      setDirectVideo('')
-      setSource('YouTube')
-    } else {
-      setVideoId('')
-      setDirectVideo(playable.url)
-      setSource('Direct video')
-    }
+    setMediaUrl(playable.url)
+    setSource(playable.label)
     const elapsedSeconds = shared.isPlaying ? Math.max(0, (Date.now() - new Date(shared.playbackUpdatedAt).getTime()) / 1000) : 0
     setTime(Math.floor(shared.playbackPosition + elapsedSeconds))
     setPlaying(shared.isPlaying)
     appliedPlaybackRef.current = playbackKey
-  }, [activeRoomId, roomFeed?.room.mediaUrl, roomFeed?.room.playbackPosition, roomFeed?.room.isPlaying, roomFeed?.room.playbackUpdatedAt])
+  }, [activeRoomId, roomFeed?.room.mediaUrl, roomFeed?.room.source, roomFeed?.room.playbackPosition, roomFeed?.room.isPlaying, roomFeed?.room.playbackUpdatedAt])
 
   function showNotice(text: string) {
     setNotice(text)
@@ -238,12 +229,25 @@ export function WatchRoom() {
     void updateSharedPlayback(roomFeed.room.mediaUrl, time, nextPlaying)
   }
 
+  function handlePlayerPlaybackStateChange(nextPlaying: boolean) {
+    if (playing === nextPlaying) return
+    setPlaying(nextPlaying)
+    if (isRoomHost && roomFeed?.room.mediaUrl) void updateSharedPlayback(roomFeed.room.mediaUrl, time, nextPlaying)
+  }
+
   function seekSharedPlayback(nextTime: number) {
     setTime(nextTime)
     if (!activeRoomId || !isRoomHost || !roomFeed?.room.mediaUrl) return
     const now = Date.now()
     if (now - playbackUpdateTimeRef.current < 2500) return
     playbackUpdateTimeRef.current = now
+    void updateSharedPlayback(roomFeed.room.mediaUrl, nextTime, playing)
+  }
+
+  function commitSharedSeek(nextTime: number) {
+    setTime(nextTime)
+    if (!activeRoomId || !isRoomHost || !roomFeed?.room.mediaUrl) return
+    playbackUpdateTimeRef.current = Date.now()
     void updateSharedPlayback(roomFeed.room.mediaUrl, nextTime, playing)
   }
 
@@ -276,39 +280,28 @@ export function WatchRoom() {
       setQuery('')
       return
     }
-    const id = youtubeId(value)
-    const file = videoFile(value)
-    if (id) {
-      setVideoId(id)
-      setDirectVideo('')
-      setTime(0)
-      setDuration(0)
-      setPlaying(false)
-      setSource('YouTube')
-      void updateSharedPlayback(value.startsWith('http') ? value : `https://${value}`, 0, false)
-      showNotice(locale === 'ar' ? 'تم تحميل الفيديو ومزامنته للغرفة.' : 'Video loaded and synced to the room.')
-    } else if (file) {
-      setVideoId('')
-      setDirectVideo(file)
-      setTime(0)
-      setDuration(0)
-      setPlaying(false)
-      setSource('Direct video')
-      void updateSharedPlayback(file, 0, false)
-      showNotice(locale === 'ar' ? 'تم تحميل الفيديو ومزامنته للغرفة.' : 'Video loaded and synced to the room.')
-    } else {
-      const isAddress = /^https?:\/\//i.test(value) || /^([\w-]+\.)+[a-z]{2,}(\/.*)?$/i.test(value)
-      if (isAddress) {
-        const url = value.startsWith('http') ? value : `https://${value}`
-        window.open(url, '_blank', 'noopener,noreferrer')
-        showNotice('Opened in a new tab. Many sites block being embedded inside other apps.')
-      } else {
-        const searchSource = source === 'Direct video' ? 'YouTube' : source
-        window.open(`/api/search?source=${encodeURIComponent(searchSource)}&query=${encodeURIComponent(value)}`, '_blank', 'noopener,noreferrer')
-        showNotice(source === 'YouTube'
-          ? (locale === 'ar' ? 'فتح البحث الآمن. الصق رابط فيديو قابلًا للتضمين لمشاهدته هنا.' : 'Safe video search opened. Paste an embeddable link to play it here.')
-          : (locale === 'ar' ? `يفتح ${source} موقعه الرسمي. تبقى المشاهدة المحمية لدى المنصة.` : `${source} opens on its official site. Protected playback stays with the provider.`))
+
+    const isAddress = /^https?:\/\//i.test(value) || /^([\w-]+\.)+[a-z]{2,}(\/.*)?$/i.test(value)
+    if (isAddress) {
+      const candidate = /^https?:\/\//i.test(value) ? value : `https://${value}`
+      const playable = getPlayableSource(candidate)
+      if (!playable) {
+        showNotice(locale === 'ar' ? 'استخدم رابط HTTPS صالحًا لمنصة أو ملف وسائط عام.' : 'Use a valid HTTPS link to a public media file or platform.')
+        return
       }
+      setMediaUrl(playable.url)
+      setTime(0)
+      setDuration(0)
+      setPlaying(false)
+      setSource(playable.label)
+      void updateSharedPlayback(playable.url, 0, false)
+      showNotice(locale === 'ar' ? 'تم تحميل الوسائط ومزامنتها للغرفة.' : 'Media loaded and synced to the room.')
+    } else {
+      const searchSource = source === 'Direct media' || source === 'External site' ? 'YouTube' : source
+      window.open(`/api/search?source=${encodeURIComponent(searchSource)}&query=${encodeURIComponent(value)}`, '_blank', 'noopener,noreferrer')
+      showNotice(source === 'YouTube'
+        ? (locale === 'ar' ? 'فتح البحث الآمن. الصق رابطًا قابلًا للتضمين للمشاهدة في الغرفة.' : 'Safe video search opened. Paste an embeddable link to watch in the room.')
+        : (locale === 'ar' ? `يفتح ${source} موقعه الرسمي. تبقى المشاهدة المحمية لدى المنصة.` : `${source} opens on its official site. Protected playback stays with the provider.`))
     }
     setQuery('')
   }
@@ -399,7 +392,7 @@ export function WatchRoom() {
 
   return <main className="watch-app">
     {view !== 'home' && <header className="app-header">
-      <button className="brand-mark" type="button" aria-label="mkemo home" onClick={leaveActiveRoom}><span className="brand-glyph"><Play size={14} fill="currentColor" /></span><span>mkemo<span className="brand-period">.</span></span></button>
+      <button className="brand-mark" type="button" aria-label="mkemo home" onClick={leaveActiveRoom}><span className="brand-glyph"><Play size={14} fill="currentColor" /></span><span>mkemo</span></button>
       <nav className="header-nav" aria-label="Main navigation"><button className={view === 'room' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => { if (activeRoomId) setView('room'); else setView('home') }}><UsersRound size={15} /> {locale === 'ar' ? 'مشاهدة' : 'Watch'}</button><button className={view === 'search' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => openMediaSearch()}><Search size={15} /> {locale === 'ar' ? 'بحث' : 'Search'}</button><button className={view === 'profile' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => setView('profile')}><Heart size={15} /> {locale === 'ar' ? 'مساحتي' : 'My space'}</button></nav>
       <div className="header-actions"><button className="header-round" type="button" aria-label={locale === 'ar' ? 'فتح البحث' : 'Open search'} onClick={() => openMediaSearch()}><Search size={17} /></button><button className="header-round language-round" type="button" onClick={() => setLocale((current) => current === 'ar' ? 'en' : 'ar')} aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}><Languages size={16} /><span>{locale.toUpperCase()}</span></button><button className="account-trigger" type="button" onClick={() => setView('profile')}><span className="tiny-avatar avatar-mint">{profileImage ? <img src={profileImage} alt="" /> : 'M'}</span><span className="account-name">Morgan</span><ChevronDown size={14} /></button></div>
     </header>}
@@ -409,11 +402,11 @@ export function WatchRoom() {
         <section className="room-titlebar"><div><div className="room-kicker"><span className="live-pulse" /> {roomPublic ? (locale === 'ar' ? 'غرفة عامة' : 'PUBLIC ROOM') : (locale === 'ar' ? 'غرفة خاصة' : 'PRIVATE ROOM')} <span className="kicker-separator">/</span> {locale === 'ar' ? 'مشاهدة الليلة' : 'TONIGHT’S WATCH'}</div><h1>{roomFeed?.room.title ?? (locale === 'ar' ? 'غرفة مشاهدة' : 'Watch together')}</h1></div><div className="room-title-actions"><button className="privacy-toggle" type="button" onClick={() => void toggleRoomVisibility()} aria-label={locale === 'ar' ? 'تغيير ظهور الغرفة' : 'Change room visibility'}>{roomPublic ? <Globe2 size={14} /> : <LockKeyhole size={14} />}{roomPublic ? (locale === 'ar' ? 'عام' : 'Public') : (locale === 'ar' ? 'خاص' : 'Private')}<ChevronDown size={13} /></button><button className="invite-button" type="button" onClick={shareRoom}>{copied ? <Check size={15} /> : <Share2 size={15} />}<span>{copied ? (locale === 'ar' ? 'تم النسخ' : 'Copied') : (locale === 'ar' ? 'دعوة' : 'Invite')}</span></button></div></section>
 
         <form className="room-search" onSubmit={openSearch}><Search size={17} /><input id="room-search" aria-label="Search or paste a video link" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a video or paste a link..." /><span className="duration-hint">24h</span><button type="submit" aria-label="Search videos"><Search size={16} /></button></form>
-        <div className="search-footnote"><span>Search {source}</span><button type="button" onClick={() => setPanel('sources')}><Globe2 size={13} /> Browse sources <ChevronDown size={12} /></button><span className="supported-note"><ShieldCheck size={12} /> Direct video up to 24h</span></div>
+        <div className="search-footnote"><span>Search {source}</span><button type="button" onClick={() => setPanel('sources')}><Globe2 size={13} /> Browse sources <ChevronDown size={12} /></button><span className="supported-note"><ShieldCheck size={12} /> {locale === 'ar' ? '4K / 240fps عند الدعم · 24 ساعة' : '4K / 240fps when available · 24h'}</span></div>
 
         <div className="room-grid">
           <section className="watch-column" aria-label="Watch together">
-            <MediaStage isPlaying={playing} isMuted={muted} controlsEnabled={isRoomHost} isFullscreen={false} currentTime={time} duration={duration} activeSource={source} videoId={videoId} directVideoUrl={directVideo} onTogglePlay={toggleSharedPlayback} onToggleMute={() => setMuted((value) => !value)} onToggleFullscreen={() => showNotice('Theater mode is available from the video player controls.')} onSeek={seekSharedPlayback} onDurationChange={setDuration} onNotice={showNotice} />
+            <MediaStage isPlaying={playing} isMuted={muted} controlsEnabled={isRoomHost} currentTime={time} duration={duration} activeSource={source} mediaUrl={mediaUrl} locale={locale} onTogglePlay={toggleSharedPlayback} onToggleMute={() => setMuted((value) => !value)} onPlaybackStateChange={handlePlayerPlaybackStateChange} onSeek={setTime} onCommitSeek={commitSharedSeek} onProgress={seekSharedPlayback} onDurationChange={setDuration} onNotice={showNotice} />
             <p className="rights-note"><ShieldCheck size={13} /> Use your own subscription. Protected movies stay in the provider&apos;s player; mkemo never shares credentials or bypasses DRM.</p>
             <div className="media-caption"><div className="media-caption-art"><img src="/cinema-still.png" alt="" /></div><div className="media-caption-copy"><span>NOW IN THE ROOM <i /> ORIGINAL PREVIEW</span><strong>{roomFeed?.room.title ?? (locale === 'ar' ? 'حمّل فيديو لعرض اسمه هنا' : 'Load a video to see its title here')}</strong><small>{source} <span>·</span> Long-form friendly</small></div><button className={`save-button${saved ? ' is-saved' : ''}`} type="button" aria-label={saved ? 'Remove from saved' : 'Save this video'} onClick={() => { setSaved((value) => !value); showNotice(saved ? 'Removed from your saved list.' : 'Saved to your mkemo space.') }}><Heart size={17} fill={saved ? 'currentColor' : 'none'} /><span>{saved ? 'Saved' : 'Save'}</span></button></div>
             <div className="member-peek"><div className="peek-avatars">{members.slice(0, 4).map((member, index) => <span key={member.guestId} className={`peek-avatar avatar-${['lilac', 'blue', 'peach', 'mint'][index % 4]}`} title={member.displayName}>{member.displayName.slice(0, 1)}</span>)}</div><button type="button" onClick={() => setPanel('people')}><strong>{new Intl.NumberFormat(locale).format(members.length)} {locale === 'ar' ? 'أشخاص' : 'people'}</strong><span>{locale === 'ar' ? 'يشاهدون معك الآن' : 'watching with you now'}</span></button><button type="button" className="peek-more" onClick={() => setPanel('people')} aria-label={locale === 'ar' ? 'عرض الجميع' : 'Show everyone'}><MoreHorizontal size={18} /></button></div>
