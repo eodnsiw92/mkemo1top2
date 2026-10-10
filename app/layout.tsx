@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'mkemo — Watch together',
-  description: 'Find your people, press play, and make movie night a shared thing.',
+  title: 'mkemo — شاهدوا سوا',
+  description: 'اكتشف غرف مشاهدة، شاهدوا الفيديوهات معًا، وتحدثوا بلغتك المفضلة. Watch together in shared rooms with live chat and GIFs.',
   icons: {
     icon: [
       {
@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="ar" dir="rtl">
       <body className="antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

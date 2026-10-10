@@ -1,64 +1,58 @@
 'use client'
 
 import { useMemo, useState, type FormEvent } from 'react'
+import useSWR from 'swr'
 import { ChevronDown, ChevronLeft, Globe2, Languages, Play, Plus, Search, ShieldCheck, Sparkles, UsersRound, X } from 'lucide-react'
 
 type DiscoverRoom = {
   id: string
   title: string
-  genre: string
   source: string
-  image: string
-  host: string
-  titleEn: string
-  genreEn: string
-  hostEn: string
+  isPublic: boolean
   viewers: number
-  avatars: string[]
+  updatedAt: string
 }
 
 type RoomDiscoveryProps = {
   locale: 'ar' | 'en'
   onToggleLocale: () => void
   onOpenProfile: () => void
-  onJoinRoom: (title: string, source: string, isPublic: boolean) => void
-  onNotice: (message: string) => void
+  onCreateRoom: (title: string, source: string, isPublic: boolean) => Promise<void>
+  onJoinRoom: (roomId: string, inviteToken?: string) => Promise<void>
+  onAcceptInvite: () => void
+  hasInvite: boolean
 }
 
 const platforms = ['YouTube', 'Netflix', 'Prime Video', 'Disney+', 'Twitch']
-const rooms: DiscoverRoom[] = [
-  { id: 'night-city', title: 'ليلة على سطح المدينة', titleEn: 'Rooftop city night', genre: 'خيال علمي', genreEn: 'Sci-fi', source: 'YouTube', image: '/discovery-night.png', host: 'ليان', hostEn: 'Layan', viewers: 4, avatars: ['ل', 'م', 'س', 'ر'] },
-  { id: 'moon-tale', title: 'حكاية ضوء القمر', titleEn: 'A moonlit story', genre: 'أنمي · مغامرة', genreEn: 'Anime · Adventure', source: 'Netflix', image: '/discovery-anime.png', host: 'سامي', hostEn: 'Sami', viewers: 5, avatars: ['س', 'ه', 'ع', 'ن', 'م'] },
-  { id: 'little-fox', title: 'رحلة الثعلب الصغير', titleEn: 'The little fox expedition', genre: 'كرتون · عائلي', genreEn: 'Animation · Family', source: 'Disney+', image: '/discovery-cartoon.png', host: 'نور', hostEn: 'Noor', viewers: 3, avatars: ['ن', 'ي', 'ل'] },
-  { id: 'after-hours', title: 'سهرة بعد منتصف الليل', titleEn: 'After midnight', genre: 'دراما · حلقات', genreEn: 'Drama · Series', source: 'Prime Video', image: '/cinema-still.png', host: 'عمر', hostEn: 'Omar', viewers: 6, avatars: ['ع', 'ج', 'د', 'م', 'ل'] },
-  { id: 'open-screen', title: 'اختيارات المجتمع', titleEn: 'Community picks', genre: 'مقاطع مختارة', genreEn: 'Curated videos', source: 'YouTube', image: '/discovery-night.png', host: 'ريم', hostEn: 'Reem', viewers: 2, avatars: ['ر', 'أ'] },
-]
-
-const avatarColors = ['avatar-lilac', 'avatar-blue', 'avatar-peach', 'avatar-mint', 'avatar-violet']
+const fetcher = async (url: string) => {
+  const response = await fetch(url, { cache: 'no-store' })
+  if (!response.ok) throw new Error('Rooms could not be loaded.')
+  return response.json() as Promise<{ rooms: DiscoverRoom[] }>
+}
 
 const copy = {
   ar: {
-    language: 'English', tagline: 'مكانكم للأفلام والأنمي واللحظات الحلوة', headline: 'شاهدوا سوا.', search: 'ابحث عن غرفة، فيلم، مسلسل...',
+    language: 'English', tagline: 'مكانكم للأفلام والأنمي واللحظات الحلوة', headline: 'شاهدوا سوا.',     search: 'ابحث عن غرفة أو فيديو...',
     sourceLabel: 'مصدر المشاهدة', allPlatforms: 'كل المنصات', choosePlatform: 'اختر منصة المشاهدة', visibility: 'ظهور الغرفة', public: 'عام', private: 'خاصة',
-    listTitle: 'غرف تستاهل المشاهدة', listSubtitle: 'اختاروا الليلة اللي على مزاجكم', preview: 'معاينة', startedBy: 'بدأها', watching: 'مشاهدين',
-    emptyTitle: 'ما لقينا غرف بهالبحث', emptyDescription: 'جرّب اسم ثاني أو اختار كل المنصات.', legal: 'كل شخص يستخدم اشتراكه الخاص. Netflix والمنصات المحمية تفتح رسميًا بدون مشاركة كلمات المرور أو تجاوز DRM.',
+    listTitle: 'غرف تستاهل المشاهدة', listSubtitle: 'اختاروا الليلة اللي على مزاجكم', preview: 'مباشر', startedBy: 'غرفة', watching: 'مشاهدين',
+    emptyTitle: 'ما فيه غرف عامة للحين', emptyDescription: 'أنشئ غرفة وادع أصحابك عشان تبدأون المشاهدة سوا.', legal: 'كل شخص يستخدم اشتراكه الخاص. المنصات المحمية تفتح رسميًا بدون مشاركة كلمات المرور أو تجاوز DRM.',
     fps: 'سلاسة تصل إلى 120 إطار/ث عند دعم الجهاز والمتصفح ومصدر الفيديو.', create: 'إنشاء غرفة مشاهدة', invite: 'دعوة أصدقاء', roomPlaceholder: 'مثلاً: سهرة الأنمي', roomName: 'اسم الغرفة',
-    createTitle: 'جهّزوا سهرتكم', createDescription: 'سمّ الغرفة، اختاروا منصة، وشاركوا الرابط مع أصحابكم.', createRoom: 'إنشاء غرفة معاينة', close: 'إغلاق',
-    previewNotice: 'الغرفة معروضة كمعاينة. مزامنة الأصدقاء تحتاج خدمة غرف مشتركة.', joinedNotice: 'معاينة الغرفة جاهزة. المحتوى المحمي يفتح في منصة المشاهدة الرسمية.', shareNotice: 'شارك الغرفة بعد ربط خدمة الدعوات والحسابات.',
+    createTitle: 'جهّزوا سهرتكم', createDescription: 'سمّ الغرفة، اختاروا منصة، وشاركوا الرابط مع أصحابكم.', createRoom: 'إنشاء الغرفة', close: 'إغلاق', joinInvite: 'انضم إلى الغرفة الخاصة',
   },
   en: {
-    language: 'العربية', tagline: 'Movies, anime, and good nights belong together', headline: 'Watch together.', search: 'Search rooms, movies, shows...',
+    language: 'العربية', tagline: 'Movies, anime, and good nights belong together', headline: 'Watch together.',     search: 'Search rooms or videos...',
     sourceLabel: 'WATCH FROM', allPlatforms: 'All platforms', choosePlatform: 'Choose a streaming platform', visibility: 'ROOM VISIBILITY', public: 'Public', private: 'Private',
-    listTitle: 'Rooms worth watching', listSubtitle: 'Pick tonight’s mood', preview: 'PREVIEW', startedBy: 'Started by', watching: 'watching',
-    emptyTitle: 'No rooms found', emptyDescription: 'Try another search or choose all platforms.', legal: 'Everyone uses their own subscription. Netflix and protected services open officially; passwords are never shared and DRM is never bypassed.',
+    listTitle: 'Rooms worth watching', listSubtitle: 'Pick tonight’s mood', preview: 'LIVE ROOMS', startedBy: 'Room', watching: 'watching',
+    emptyTitle: 'No public rooms yet', emptyDescription: 'Create a room and invite friends to start watching together.', legal: 'Everyone uses their own subscription. Protected services open officially; passwords are never shared and DRM is never bypassed.',
     fps: 'Up to 120 fps when supported by the device, browser, and video source.', create: 'Create a watch room', invite: 'Invite friends', roomPlaceholder: 'e.g. Anime night', roomName: 'Room name',
-    createTitle: 'Set up your watch night', createDescription: 'Name the room, choose a source, and share the invite.', createRoom: 'Create preview room', close: 'Close',
-    previewNotice: 'This room is a preview. Shared playback needs a live room service.', joinedNotice: 'Room preview is ready. Protected media opens in its official player.', shareNotice: 'Room invites will be available when account and invite services are connected.',
+    createTitle: 'Set up your watch night', createDescription: 'Name the room, choose a source, and share the invite.', createRoom: 'Create room', close: 'Close', joinInvite: 'Join private room',
   },
 } as const
 
-export function RoomDiscovery({ locale, onToggleLocale, onOpenProfile, onJoinRoom, onNotice }: RoomDiscoveryProps) {
+export function RoomDiscovery({ locale, onToggleLocale, onOpenProfile, onCreateRoom, onJoinRoom, onAcceptInvite, hasInvite }: RoomDiscoveryProps) {
   const t = copy[locale]
+  const { data } = useSWR<{ rooms: DiscoverRoom[] }>('/api/rooms', fetcher, { refreshInterval: 8000, revalidateOnFocus: true })
+  const rooms = data?.rooms ?? []
   const [query, setQuery] = useState('')
   const [selectedPlatform, setSelectedPlatform] = useState('الكل')
   const [platformMenuOpen, setPlatformMenuOpen] = useState(false)
@@ -70,20 +64,19 @@ export function RoomDiscovery({ locale, onToggleLocale, onOpenProfile, onJoinRoo
     const normalizedQuery = query.trim().toLocaleLowerCase('ar')
     return rooms.filter((room) => {
       const matchesPlatform = selectedPlatform === 'الكل' || room.source === selectedPlatform
-      const matchesQuery = !normalizedQuery || `${room.title} ${room.genre} ${room.source} ${room.host} ${room.titleEn} ${room.genreEn} ${room.hostEn}`.toLocaleLowerCase(locale).includes(normalizedQuery)
+      const matchesQuery = !normalizedQuery || `${room.title} ${room.source}`.toLocaleLowerCase(locale).includes(normalizedQuery)
       return matchesPlatform && matchesQuery
     })
-  }, [locale, query, selectedPlatform])
+  }, [locale, query, rooms, selectedPlatform])
 
   function createRoom(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const title = newRoomTitle.trim()
     if (!title) return
     const source = selectedPlatform === 'الكل' ? 'YouTube' : selectedPlatform
+    void onCreateRoom(title, source, isPublic)
     setCreateOpen(false)
     setNewRoomTitle('')
-    onJoinRoom(title, source, isPublic)
-    onNotice(t.previewNotice)
   }
 
   return (
@@ -94,15 +87,17 @@ export function RoomDiscovery({ locale, onToggleLocale, onOpenProfile, onJoinRoo
         <header className="discovery-header">
           <button className="discovery-profile-button" type="button" onClick={onOpenProfile} aria-label={locale === 'ar' ? 'الملف الشخصي' : 'Profile'}><span>م</span></button>
           <div className="discovery-wordmark" aria-label="mkemo"><span className="discovery-mark"><Play size={19} fill="currentColor" /></span><span>mkemo<span className="discovery-period">.</span></span></div>
-          <div className="discovery-header-actions"><button className="discovery-language-button" type="button" onClick={onToggleLocale} aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}><Languages size={16} /><span>{t.language}</span></button><button className="discovery-invite-button" type="button" onClick={() => onNotice(t.shareNotice)} aria-label={t.invite}><UsersRound size={19} /></button></div>
+          <div className="discovery-header-actions"><button className="discovery-language-button" type="button" onClick={onToggleLocale} aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}><Languages size={16} /><span>{t.language}</span></button><button className="discovery-invite-button" type="button" onClick={() => setCreateOpen(true)} aria-label={t.invite}><UsersRound size={19} /></button></div>
         </header>
 
         <div className="discovery-intro"><span><Sparkles size={13} /> {t.tagline}</span><h1>{t.headline}</h1></div>
+        {hasInvite && <button className="discovery-invite-card" type="button" onClick={onAcceptInvite}><UsersRound size={18} /><span>{t.joinInvite}</span><ChevronLeft size={18} /></button>}
 
-        <form className="discovery-search" role="search" onSubmit={(event) => event.preventDefault()}>
-          <Search size={27} aria-hidden="true" />
-          <input aria-label={locale === 'ar' ? 'ابحث عن غرفة أو فيلم أو مسلسل' : 'Search rooms, movies, or shows'} placeholder={t.search} value={query} onChange={(event) => setQuery(event.target.value)} />
+        <form className="discovery-search" role="search" onSubmit={(event) => { event.preventDefault(); const value = query.trim(); if (value) window.open(`/api/search?source=YouTube&query=${encodeURIComponent(value)}`, '_blank', 'noopener,noreferrer') }}>
+          <Search size={22} aria-hidden="true" />
+          <input aria-label={locale === 'ar' ? 'ابحث عن غرفة أو فيديو' : 'Search rooms or videos'} placeholder={t.search} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} />
           {query && <button type="button" className="discovery-clear" aria-label={locale === 'ar' ? 'مسح البحث' : 'Clear search'} onClick={() => setQuery('')}><X size={18} /></button>}
+          <button type="submit" aria-label={locale === 'ar' ? 'بحث آمن عن فيديو' : 'Search videos safely'}><Search size={16} /></button>
         </form>
 
         <div className="discovery-selects">
@@ -123,12 +118,12 @@ export function RoomDiscovery({ locale, onToggleLocale, onOpenProfile, onJoinRoo
         <div className="discovery-list-heading"><div><h2>{t.listTitle}</h2><span>{t.listSubtitle}</span></div><span className="preview-pill"><span /> {t.preview}</span></div>
 
         <div className="discovery-room-list" aria-live="polite">
-          {filteredRooms.map((room) => <button className="discovery-room-card" type="button" key={room.id} onClick={() => { onJoinRoom(room.title, room.source, isPublic); onNotice(t.joinedNotice) }}>
-            <span className="discovery-cover"><img src={room.image} alt="" /><span className="cover-play"><Play size={19} fill="currentColor" /></span><span className="cover-source">{room.source}</span></span>
-            <span className="discovery-room-copy"><span className="discovery-room-meta"><span>{locale === 'ar' ? room.genre : room.genreEn}</span><i /></span><strong>{locale === 'ar' ? room.title : room.titleEn}</strong><span className="discovery-host">{t.startedBy} {locale === 'ar' ? room.host : room.hostEn}</span><span className="discovery-room-bottom"><span className="discovery-avatars" aria-label={`${new Intl.NumberFormat(locale).format(room.viewers)} ${t.watching}, preview data`}>{room.avatars.map((avatar, index) => <i className={avatarColors[index % avatarColors.length]} key={`${room.id}-${index}`}>{locale === 'ar' ? avatar : room.avatars[index]}</i>)}</span><span className="room-viewer-count"><UsersRound size={13} />{new Intl.NumberFormat(locale).format(room.viewers)} {t.watching}</span></span></span>
+          {filteredRooms.map((room) => <button className="discovery-room-card" type="button" key={room.id} onClick={() => { void onJoinRoom(room.id) }}>
+            <span className="discovery-cover"><img src="/cinema-still.png" alt="" /><span className="cover-play"><Play size={19} fill="currentColor" /></span><span className="cover-source">{room.source}</span></span>
+            <span className="discovery-room-copy"><span className="discovery-room-meta"><span>{room.isPublic ? t.public : t.private}</span><i /></span><strong>{room.title}</strong><span className="discovery-host">{t.startedBy} · {room.source}</span><span className="discovery-room-bottom"><span className="discovery-avatars" aria-hidden="true">{Array.from({ length: Math.min(room.viewers, 4) }, (_, index) => <i className={`avatar-dot avatar-dot-${index}`} key={`${room.id}-${index}`} />)}</span><span className="room-viewer-count" aria-label={`${new Intl.NumberFormat(locale).format(room.viewers)} ${t.watching}`}><UsersRound size={13} />{new Intl.NumberFormat(locale).format(room.viewers)} {t.watching}</span></span></span>
             <ChevronLeft className="room-card-arrow" size={19} />
           </button>)}
-          {filteredRooms.length === 0 && <div className="discovery-empty"><Search size={22} /><strong>{t.emptyTitle}</strong><span>{t.emptyDescription}</span></div>}
+          {filteredRooms.length === 0 && <div className="discovery-empty"><Search size={22} /><strong>{t.emptyTitle}</strong><span>{t.emptyDescription}</span><button type="button" onClick={() => setCreateOpen(true)}>{t.create} <Plus size={15} /></button></div>}
         </div>
 
         <p className="discovery-rights"><ShieldCheck size={14} /> {t.legal}</p>
@@ -145,7 +140,7 @@ export function RoomDiscovery({ locale, onToggleLocale, onOpenProfile, onJoinRoo
           <p>{t.createDescription}</p>
           <form onSubmit={createRoom}>
             <label htmlFor="new-room-title">{t.roomName}</label>
-            <input id="new-room-title" autoFocus maxLength={60} placeholder={t.roomPlaceholder} value={newRoomTitle} onChange={(event) => setNewRoomTitle(event.target.value)} required />
+            <input id="new-room-title" autoFocus maxLength={60} placeholder={t.roomPlaceholder} value={newRoomTitle} onChange={(event) => setNewRoomTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} required />
             <span className="dialog-platform-label">{locale === 'ar' ? 'المنصة' : 'Platform'}: {selectedPlatform === 'الكل' ? 'YouTube' : selectedPlatform} · {isPublic ? t.public : t.private}</span>
             <button className="dialog-submit" type="submit">{t.createRoom} <ChevronLeft size={17} /></button>
           </form>
