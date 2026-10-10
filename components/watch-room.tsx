@@ -31,6 +31,8 @@ import {
 } from 'lucide-react'
 import { MediaStage } from '@/components/media-stage'
 import { RoomChatPanel } from '@/components/room-chat-panel'
+import { CountryName } from '@/components/country-name'
+import { splitCountryFlag } from '@/lib/country'
 import { RoomDiscovery } from '@/components/room-discovery'
 import { MediaSearchHub } from '@/components/media-search-hub'
 import { useRoomFeed } from '@/lib/room-feed'
@@ -376,8 +378,8 @@ export function WatchRoom() {
       {(panel === 'people' || panel === null) && <div className="people-panel">
         <div className="panel-summary"><div><strong>{locale === 'ar' ? 'الموجودون في الغرفة' : 'In the room'}</strong><span>{locale === 'ar' ? 'شاهدوا وتحدثوا سوا.' : 'Watch and chat together.'}</span></div><button type="button" className="panel-add" aria-label={locale === 'ar' ? 'دعوة صديق' : 'Invite a friend'} onClick={shareRoom}><Plus size={17} /></button></div>
         <div className="member-list">{members.map((member, index) => <article className="member-row" key={member.guestId}>
-          <span className={`member-avatar avatar-${['lilac', 'blue', 'peach', 'mint'][index % 4]}`}>{member.displayName.slice(0, 1)}<i><UsersRound size={9} /></i></span>
-          <span className="member-details"><strong>{member.displayName}{member.isHost && <span className="host-tag">{locale === 'ar' ? 'المضيف' : 'HOST'}</span>}</strong><small>{locale === 'ar' ? 'عضو في الغرفة' : 'Room member'}</small><small className="member-state"><UsersRound size={12} /> {locale === 'ar' ? 'متصل الآن' : 'Here now'}</small></span>
+          <span className={`member-avatar avatar-${['lilac', 'blue', 'peach', 'mint'][index % 4]}`}>{splitCountryFlag(member.displayName).displayName.slice(0, 1)}<i><UsersRound size={9} /></i></span>
+          <span className="member-details"><strong><CountryName name={member.displayName} />{member.isHost && <span className="host-tag">{locale === 'ar' ? 'المضيف' : 'HOST'}</span>}</strong><small>{locale === 'ar' ? 'عضو في الغرفة' : 'Room member'}</small><small className="member-state"><UsersRound size={12} /> {locale === 'ar' ? 'متصل الآن' : 'Here now'}</small></span>
           <span className="member-online" aria-label={locale === 'ar' ? 'متصل' : 'Online'} />
         </article>)}</div>
         <button className="invite-wide" type="button" onClick={shareRoom}><Link2 size={15} /> {locale === 'ar' ? 'ادعوا أصحابكم' : 'Invite friends'} <span>{activeRoomId?.slice(0, 8).toUpperCase()}</span></button>

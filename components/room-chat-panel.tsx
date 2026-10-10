@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Copy, ImagePlus, Languages, LoaderCircle, MessageCircle, Send } from 'lucide-react'
+import { CountryName } from '@/components/country-name'
 import type { RoomFeed } from '@/lib/room-feed'
 
 type RoomChatPanelProps = {
@@ -96,9 +97,9 @@ export function RoomChatPanel({ roomId, locale, feed, onRefresh, onNotice }: Roo
     <div className="chat-day">{locale === 'ar' ? 'نشاط الغرفة' : 'ROOM ACTIVITY'} <span /> {locale === 'ar' ? 'مباشر' : 'LIVE'}</div>
     <div className="chat-messages" role="log" aria-label={locale === 'ar' ? 'رسائل الغرفة' : 'Room chat messages'} aria-live="polite">
       {activity.map((item) => item.kind === 'event' ? <p className="room-event" key={`event-${item.value.id}`}><span />{locale === 'ar' ? `${item.value.name} ${item.value.action === 'joined' ? 'انضم إلى الغرفة' : 'غادر الغرفة'}` : `${item.value.name} ${item.value.action} the room`}</p> : <article className={`chat-message${item.value.guestId === feed?.currentGuestId ? ' own' : ''}`} key={`message-${item.value.id}`}>
-        <div className="chat-bubble-wrap"><div className="chat-meta"><strong>{item.value.name}</strong><time dateTime={item.value.createdAt}>{new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(new Date(item.value.createdAt))}</time></div>
+        <div className="chat-bubble-wrap"><div className="chat-meta"><strong className="chat-user-name"><CountryName name={item.value.name} /></strong><time dateTime={item.value.createdAt}>{new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(new Date(item.value.createdAt))}</time></div>
           {item.value.text && <p>{item.value.text}</p>}
-          {item.value.attachmentUrl && <img className="chat-gif" src={item.value.attachmentUrl} alt={locale === 'ar' ? 'صورة GIF أرسلها أحد أعضاء الغرفة' : 'GIF shared in the room'} loading="lazy" />}
+          {item.value.attachmentUrl && (item.value.attachmentKind === 'video' ? <video className="chat-gif" src={item.value.attachmentUrl} controls playsInline preload="metadata" aria-label={locale === 'ar' ? 'فيديو أرسله أحد أعضاء الغرفة' : 'Video shared in the room'} /> : <img className="chat-gif" src={item.value.attachmentUrl} alt={locale === 'ar' ? 'صورة أو GIF أرسلها أحد أعضاء الغرفة' : 'Photo or GIF shared in the room'} loading="lazy" />)}
           {translations[item.value.id] && <p className="chat-translation" lang={locale}>{translations[item.value.id]}</p>}
           <div className="chat-message-actions"><button type="button" aria-label={locale === 'ar' ? 'نسخ الرسالة' : 'Copy message'} onClick={() => { void navigator.clipboard.writeText(item.value.text).then(() => onNotice(locale === 'ar' ? 'تم نسخ الرسالة.' : 'Message copied.')).catch(() => onNotice(locale === 'ar' ? 'تعذر نسخ الرسالة.' : 'Could not copy message.')) }} disabled={!item.value.text}><Copy size={12} /><span>{locale === 'ar' ? 'نسخ' : 'Copy'}</span></button><button type="button" aria-label={locale === 'ar' ? 'ترجمة الرسالة' : 'Translate message'} onClick={() => void translateMessage(item.value.id, item.value.text)} disabled={!item.value.text || Boolean(translations[item.value.id]) || translatingId === item.value.id}>{translatingId === item.value.id ? <LoaderCircle size={12} className="spin" /> : <Languages size={12} />}<span>{locale === 'ar' ? 'ترجمة' : 'Translate'}</span></button></div>
         </div>
@@ -107,11 +108,11 @@ export function RoomChatPanel({ roomId, locale, feed, onRefresh, onNotice }: Roo
     </div>
     <form className="chat-compose" onSubmit={sendMessage}>
       <input aria-label={locale === 'ar' ? 'اكتب رسالة' : 'Write a message'} placeholder={locale === 'ar' ? 'اكتب شي لطيف...' : 'Say something nice...'} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} />
-      <button type="button" aria-label={locale === 'ar' ? 'إرفاق GIF أو صورة' : 'Attach a GIF or photo'} onClick={() => mediaInput.current?.click()}><ImagePlus size={16} /></button>
+      <button type="button" aria-label={locale === 'ar' ? 'إرفاق GIF أو صورة أو فيديو' : 'Attach a GIF, photo, or video'} onClick={() => mediaInput.current?.click()}><ImagePlus size={16} /></button>
       <button className="send-message" type="submit" aria-label={locale === 'ar' ? 'إرسال الرسالة' : 'Send message'} disabled={sending || (!draft.trim() && !selectedMedia)}>{sending ? <LoaderCircle className="spin" size={14} /> : <Send size={14} />}</button>
-      <input ref={mediaInput} className="visually-hidden-input" type="file" accept="image/gif,image/jpeg,image/png,image/webp" onChange={selectGif} aria-label={locale === 'ar' ? 'اختر GIF أو صورة' : 'Choose a GIF or photo'} />
+      <input ref={mediaInput} className="visually-hidden-input" type="file" accept="image/gif,image/jpeg,image/png,image/webp,video/mp4,video/webm" onChange={selectMedia} aria-label={locale === 'ar' ? 'اختر GIF أو صورة أو فيديو' : 'Choose a GIF, photo, or video'} />
     </form>
     {selectedMedia && <div className="selected-gif"><span>{selectedMedia.name}</span><button type="button" onClick={() => setSelectedMedia(null)}>{locale === 'ar' ? 'إزالة' : 'Remove'}</button></div>}
-    <p className="preview-caption"><MessageCircle size={13} /> {locale === 'ar' ? 'الرسائل والصور وملفات GIF محفوظة داخل الغرفة. تُفحص الصور تلقائيًا قبل النشر؛ لا تشارك كلمات مرور البث.' : 'Messages and private GIFs/photos stay in this room. Uploads are automatically screened; never share streaming passwords.'}</p>
+    <p className="preview-caption"><MessageCircle size={13} /> {locale === 'ar' ? 'الرسائل والصور وملفات GIF محفوظة داخل الغرفة. تُفحص الصور تلقائيًا قبل النشر؛ لا تشارك كلمات مرور البث.' : 'Messages and private media stay in this room. Uploads are automatically screened; never share streaming passwords.'}</p>
   </div>
 }

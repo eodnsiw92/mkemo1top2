@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 import { roomEvents, roomMembers, rooms } from '@/lib/db/schema'
 import { cleanMessage, containsProhibitedSearch } from '@/lib/content-safety'
 import { getGuestId, guestDisplayName, hashInviteToken } from '@/lib/guest-session'
+import { countryFlagFromAcceptLanguage, withCountryFlag } from '@/lib/country'
 import { isSameOriginRequest } from '@/lib/request-origin'
 
 const sources = new Set(['YouTube', 'Netflix', 'Prime Video', 'Disney+', 'Twitch'])
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
   const id = randomUUID()
   const inviteToken = randomBytes(24).toString('base64url')
   const displayName = typeof input.displayName === 'string' ? cleanMessage(input.displayName).slice(0, 32) : ''
-  const name = displayName || guestDisplayName(guestId)
+  const name = withCountryFlag(displayName || guestDisplayName(guestId), countryFlagFromAcceptLanguage(request.headers.get('accept-language')))
   const isPublic = input.isPublic === true
 
   await db.transaction(async (tx) => {

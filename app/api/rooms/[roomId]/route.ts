@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { roomEvents, roomMembers, roomMessages, rooms } from '@/lib/db/schema'
 import { getGuestId, guestDisplayName, verifyInviteToken } from '@/lib/guest-session'
+import { countryFlagFromAcceptLanguage, withCountryFlag } from '@/lib/country'
 import { getRoomAccess } from '@/lib/room-access'
 import { getPlayableSource } from '@/lib/media-url'
 import { cleanMessage, containsProhibitedSearch } from '@/lib/content-safety'
@@ -91,12 +92,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ro
   const allowed = room.isPublic || room.ownerId === guestId || isMember || verifyInviteToken(inviteToken, room.inviteTokenHash)
   if (!allowed) return NextResponse.json({ error: 'This room is private. Use its invite link to join.' }, { status: 403 })
 
-  const [existing] = await db.select({ guestId: roomMembers.guestId }).from(roomMembers).where(and(eq(roomMembers.roomId, roomId), eq(roomMembers.guestId, guestId))).limit(1)
-  const name = displayName || (existing ? undefined : guestDisplayName(guestId))
+  const [existing] = await db.select({ guestId: roomMembers.guestId, displayName: roomMembers.displayName }).from(roomMembers).where(and(eq(roomMembers.roomId, roomId), eq(roomMembers.guestId, guestId))).limit(1)
+  const displayNameToUse = displayName || existing?.displayName || guestDisplayName(guestId)
+  const name = withCountryFlag(displayNameToUse, countryFlagFromAcceptLanguage(request.headers.get('accept-language')))
   await db.transaction(async (tx) => {
-    await tx.insert(roomMembers).values({ roomId, guestId, displayName: name || guestDisplayName(guestId), isHost: room.ownerId === guestId })
-      .onConflictDoUpdate({ target: [roomMembers.roomId, roomMembers.guestId], set: { lastSeenAt: new Date(), ...(name ? { displayName: name } : {}) } })
-    if (!existing) await tx.insert(roomEvents).values({ id: randomUUID(), roomId, guestId, displayName: name || guestDisplayName(guestId), eventType: 'joined' })
+    await tx.insert(roomMembers).values({ roomId, guestId, displayName: name, isHost: room.ownerId === guestId })
+      .onConflictDoUpdate({ target: [roomMembers.roomId, roomMembers.guestId], set: { lastSeenAt: new Date(), displayName: name } })
+    if (!existing) await tx.insert(roomEvents).values({ id: randomUUID(), roomId, guestId, displayName: name, eventType: 'joined' })
     await tx.update(rooms).set({ updatedAt: new Date() }).where(eq(rooms.id, roomId))
   })
   return NextResponse.json({ room: { id: room.id, title: room.title, source: room.source, isPublic: room.isPublic } }, { headers: { 'Cache-Control': 'no-store' } })

@@ -579,3 +579,6 @@ button { color: inherit; }
   .media-service-action { display: none; }
   .media-hub-section-heading > span { max-width: 58px; text-align: end; }
 }
+
+.country-flag { display: inline-block; margin-inline-start: .38em; font-family: system-ui, sans-serif; font-size: 1em; line-height: 1; vertical-align: -0.04em; }
+.chat-user-name { font-weight: 650; }
