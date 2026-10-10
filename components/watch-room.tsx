@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   ArrowLeft,
-  AtSign,
   Check,
   ChevronDown,
   Copy,
@@ -31,6 +30,7 @@ import {
 } from 'lucide-react'
 import { MediaStage } from '@/components/media-stage'
 import { RoomChatPanel } from '@/components/room-chat-panel'
+import { ProfilePanel } from '@/components/profile-panel'
 import { CountryName } from '@/components/country-name'
 import { splitCountryFlag } from '@/lib/country'
 import { RoomDiscovery } from '@/components/room-discovery'
@@ -43,7 +43,6 @@ type Panel = 'people' | 'chat' | 'sources' | null
 
 
 const services = ['YouTube', 'Netflix', 'Prime Video', 'Disney+', 'Twitch']
-const interests = ['Indie films', 'Sci-fi', 'Soundtracks', 'Documentaries', 'Late-night playlists']
 
 function youtubeId(value: string) {
   const candidate = /^https?:\/\//i.test(value) ? value : `https://${value}`
@@ -79,7 +78,6 @@ export function WatchRoom() {
   const [profileImage, setProfileImage] = useState('')
   const [posts, setPosts] = useState<string[]>([])
   const [saved, setSaved] = useState(true)
-  const photoInput = useRef<HTMLInputElement>(null)
   const appliedPlaybackRef = useRef('')
   const playbackUpdateTimeRef = useRef(0)
   const { data: roomFeed, mutate: refreshRoomFeed } = useRoomFeed(activeRoomId)
@@ -347,17 +345,24 @@ export function WatchRoom() {
   function selectPhoto(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      showNotice('Choose an image file to continue.')
+    const supportedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!supportedTypes.includes(file.type)) {
+      showNotice(locale === 'ar' ? 'اختار صورة بصيغة JPG أو PNG أو GIF.' : 'Choose a JPG, PNG, WebP, or GIF image.')
+      event.target.value = ''
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showNotice(locale === 'ar' ? 'حجم الصورة لازم يكون أقل من 10 ميجابايت.' : 'Choose an image smaller than 10 MB.')
+      event.target.value = ''
       return
     }
     const reader = new FileReader()
     reader.onload = () => {
-      const result = String(reader.result)
-      setProfileImage(result)
-      setPosts((items) => [result, ...items])
+      if (typeof reader.result !== 'string') return
+      setProfileImage(reader.result)
+      setPosts((items) => [reader.result as string, ...items])
       setView('profile')
-      showNotice('Photo added to this preview. Connect account storage to publish it for real.')
+      showNotice(locale === 'ar' ? 'اتضافت صورتك للمعاينة. صور GIF المتحركة مدعومة.' : 'Your photo was added to the preview. Animated GIFs are supported.')
     }
     reader.readAsDataURL(file)
     event.target.value = ''
@@ -420,13 +425,8 @@ export function WatchRoom() {
       </div>
       <div className="mobile-panel-scrim" aria-hidden="true" onClick={() => setPanel(null)} />
       <footer className="room-footer"><span><span className="footer-live" /> mkemo room <b>{activeRoomId?.slice(0, 8).toUpperCase()}</b></span><span className="footer-copyright">{locale === 'ar' ? 'مساحة للحظات اللي تحبونها.' : 'A room for the things you love.'}</span><button type="button" onClick={shareRoom}><Share2 size={14} /> {locale === 'ar' ? 'مشاركة الغرفة' : 'Share room'}</button></footer>
-    </> : <section className="profile-view">
-      <button className="profile-back" type="button" onClick={() => setView(activeRoomId ? 'room' : 'home')}><ArrowLeft size={16} /> {locale === 'ar' ? 'رجوع' : 'Back'}</button>
-      <div className="profile-hero"><div className="profile-cover"><img src="/cinema-still.png" alt="A cinematic city at sunset" /></div><div className="profile-main"><button className="profile-photo" type="button" onClick={() => photoInput.current?.click()} aria-label="Upload profile photo">{profileImage ? <img src={profileImage} alt="Morgan's profile" /> : <span>M</span>}<i><ImagePlus size={15} /></i></button><div className="profile-title"><span className="profile-handle">@morgan <span>🇨🇦</span></span><h1>Morgan Lee</h1><p>Collecting good films and better company.</p></div><button className="profile-edit" type="button" onClick={() => photoInput.current?.click()}><ImagePlus size={15} /> Add a photo</button></div><div className="profile-stats"><span><strong>04</strong> friends</span><span><strong>{posts.length.toString().padStart(2, '0')}</strong> posts</span><span><strong>08</strong> watch nights</span></div></div>
-      <div className="profile-columns"><section className="profile-section interests-card"><div className="profile-section-heading"><span>YOUR TASTE</span><button type="button" onClick={() => showNotice('Interest editing will be available with account setup.')}><MoreHorizontal size={18} /></button></div><h2>Things I&apos;m into</h2><p>Good stories have a way of finding their people.</p><div className="interest-list">{interests.map((interest) => <span className="interest-chip" key={interest}>{interest}</span>)}</div><div className="interest-edit-note"><AtSign size={14} /> Meet friends who love the same things.</div></section><section className="profile-section posts-section"><div className="profile-section-heading"><div><span>YOUR CORNER</span><h2>Photos & moments</h2></div><button className="new-post" type="button" onClick={() => photoInput.current?.click()}><Plus size={15} /> Post a photo</button></div><p className="profile-preview-note">Your page, your favorites. New photos are preview-only until account storage is connected.</p><div className="photo-grid">{posts.map((post, index) => <button type="button" className="photo-post" key={`${post.slice(-14)}-${index}`} onClick={() => showNotice('Photo post preview. Connect storage to share it with your friends.')}><img src={post} alt={`Photo post ${index + 1}`} /><span><Heart size={14} /> Just added</span></button>)}{posts.length === 0 && <button className="empty-post" type="button" onClick={() => photoInput.current?.click()}><span><ImagePlus size={21} /></span><strong>Your first photo goes here</strong><small>Share a moment from your movie night.</small><em>Choose a photo <Plus size={13} /></em></button>}</div></section></div>
-      <input className="visually-hidden-input" ref={photoInput} type="file" accept="image/*" onChange={selectPhoto} aria-label="Choose a profile photo to post" />
-      <p className="profile-legal">© 2026 mkemo. A place to watch and share what you love.</p>
-    </section>}
+    </> : <ProfilePanel locale={locale} profileImage={profileImage} posts={posts} onBack={() => setView(activeRoomId ? 'room' : 'home')} onNotice={showNotice} onPhotoChange={selectPhoto} />}
+
 
     {notice && <div className="notice-toast" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss notification"><X size={15} /></button></div>}
   </main>
