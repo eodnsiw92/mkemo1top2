@@ -3,7 +3,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import useSWR from 'swr'
 import { Activity, ChevronDown, ChevronLeft, Globe2, Languages, Play, Plus, Search, ShieldCheck, UsersRound, X } from 'lucide-react'
-import { PlatformShortcuts } from '@/components/platform-shortcuts'
 import { RoomThumbnail } from '@/components/room-thumbnail'
 
 type DiscoverRoom = {
@@ -100,8 +99,6 @@ export function RoomDiscovery({ locale, onToggleLocale, onOpenProfile, onOpenSea
           <input dir={locale === 'ar' ? 'rtl' : 'ltr'} aria-label={locale === 'ar' ? 'ابحث عن غرفة أو فيديو' : 'Search rooms or videos'} placeholder={t.search} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} />
           {query && <button type="button" className="discovery-clear" aria-label={locale === 'ar' ? 'مسح البحث' : 'Clear search'} onClick={() => setQuery('')}><X size={18} /></button>}
         </form>
-
-        <PlatformShortcuts locale={locale} onSelectPlatform={setSelectedPlatform} />
 
         <div className="discovery-connectivity">
           <button className="connectivity-trigger" type="button" aria-expanded={connectMenuOpen} aria-controls="connectivity-options" onClick={() => setConnectMenuOpen((open) => !open)}>
