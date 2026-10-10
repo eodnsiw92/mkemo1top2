@@ -227,14 +227,35 @@ export function WatchRoom() {
   }
 
   async function playMediaLink(value: string) {
-    const playable = getPlayableSourceFromInput(value)
-    if (!playable || containsProhibitedSearch(playable.url)) {
-      showNotice(locale === 'ar' ? 'استخدم رابط HTTPS آمنًا لفيديو أو منصة مدعومة.' : 'Use a secure HTTPS link to a supported video or player.')
+    const parsed = getPlayableSourceFromInput(value)
+    if (!parsed) {
+      showNotice(locale === 'ar' ? 'الرابط غير صالح. تأكد من كتابته بشكل صحيح.' : 'That link is not valid. Check it and try again.')
+      return
+    }
+    if (containsProhibitedSearch(parsed.url)) {
+      showNotice(locale === 'ar' ? 'الروابط الإباحية غير مسموحة.' : 'Pornographic links are not allowed.')
       return
     }
     if (activeRoomId && !isRoomHost) {
       showNotice(locale === 'ar' ? 'مضيف الغرفة فقط يستطيع اختيار فيديو جديد.' : 'Only the room host can choose a new video.')
       return
+    }
+
+    let playable = parsed
+    let frameBlocked = false
+    if (parsed.kind !== 'youtube' && parsed.kind !== 'direct') {
+      showNotice(locale === 'ar' ? 'جارٍ البحث عن الفيديو داخل الرابط…' : 'Finding the video on that page…')
+      try {
+        const response = await fetch(`/api/resolve-media?url=${encodeURIComponent(parsed.url)}`)
+        const resolved = await response.json().catch(() => ({})) as { url?: string; reason?: string; frameBlocked?: boolean }
+        if (resolved.reason === 'blocked') {
+          showNotice(locale === 'ar' ? 'هذا الموقع إباحي ولا يمكن فتحه.' : 'This site is pornographic and cannot be opened.')
+          return
+        }
+        const resolvedSource = response.ok && resolved.url ? getPlayableSource(resolved.url) : null
+        if (resolvedSource) playable = resolvedSource
+        frameBlocked = resolved.frameBlocked === true
+      } catch {}
     }
 
     const isCreatingRoom = !activeRoomId
@@ -262,7 +283,9 @@ export function WatchRoom() {
         return
       }
       if (!isCreatingRoom) await refreshRoomFeed()
-      showNotice(locale === 'ar' ? 'تم تشغيل الرابط ومزامنته مع الغرفة.' : 'The link is playing and synced to the room.')
+      showNotice(frameBlocked
+        ? (locale === 'ar' ? 'هذا الموقع يمنع العرض داخل التطبيقات. استخدم زر "فتح المصدر".' : 'This site blocks embedding. Use "Open source" to watch it.')
+        : (locale === 'ar' ? 'تم تشغيل الرابط ومزامنته مع الغرفة.' : 'The link is playing and synced to the room.'))
     } catch {
       setPlaying(false)
       showNotice(locale === 'ar' ? 'تعذّر تشغيل الرابط في الغرفة. حاول مرة أخرى.' : 'The link could not be loaded into the room. Try again.')

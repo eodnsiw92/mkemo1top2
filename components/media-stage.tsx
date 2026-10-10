@@ -367,7 +367,7 @@ export function MediaStage({
             title={`${sourceInfo.label} embedded player`}
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             referrerPolicy="strict-origin-when-cross-origin"
-            sandbox="allow-scripts allow-forms allow-presentation"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups"
             allowFullScreen
           />
           <div className="stage-embed-tools">
