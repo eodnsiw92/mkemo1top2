@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gt, inArray } from 'drizzle-orm'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
@@ -16,6 +16,7 @@ export async function GET() {
     title: rooms.title,
     source: rooms.source,
     isPublic: rooms.isPublic,
+    mediaUrl: rooms.mediaUrl,
     updatedAt: rooms.updatedAt,
     viewers: count(roomMembers.guestId),
   }).from(rooms)
@@ -25,7 +26,24 @@ export async function GET() {
     .orderBy(desc(rooms.updatedAt))
     .limit(40)
 
-  return NextResponse.json({ rooms: publicRooms }, { headers: { 'Cache-Control': 'no-store' } })
+  const roomIds = publicRooms.map((room) => room.id)
+  const activeMembers = roomIds.length > 0
+    ? await db.select({ roomId: roomMembers.roomId, guestId: roomMembers.guestId, displayName: roomMembers.displayName })
+      .from(roomMembers)
+      .where(and(inArray(roomMembers.roomId, roomIds), gt(roomMembers.lastSeenAt, activeSince)))
+      .orderBy(asc(roomMembers.joinedAt))
+    : []
+  const membersByRoom = new Map<string, typeof activeMembers>()
+  for (const member of activeMembers) {
+    const roomMembers = membersByRoom.get(member.roomId) ?? []
+    if (roomMembers.length < 4) roomMembers.push(member)
+    membersByRoom.set(member.roomId, roomMembers)
+  }
+
+  return NextResponse.json({ rooms: publicRooms.map((room) => ({
+    ...room,
+    members: membersByRoom.get(room.id) ?? [],
+  })) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: NextRequest) {
@@ -34,11 +52,10 @@ export async function POST(request: NextRequest) {
   try { payload = await request.json() } catch { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }) }
   if (!payload || typeof payload !== 'object') return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
 
-  const input = payload as { title?: unknown; source?: unknown; isPublic?: unknown; displayName?: unknown }
-  const title = typeof input.title === 'string' ? cleanMessage(input.title).slice(0, 60) : ''
+  const input = payload as { source?: unknown; isPublic?: unknown; displayName?: unknown }
+  const title = 'Watch together'
   const source = typeof input.source === 'string' && sources.has(input.source) ? input.source : ''
-  if (!title || !source) return NextResponse.json({ error: 'Add a room name and choose a supported video source.' }, { status: 400 })
-  if (containsProhibitedSearch(title)) return NextResponse.json({ error: 'Adult or pornographic room names are not allowed.' }, { status: 422 })
+  if (!source) return NextResponse.json({ error: 'Choose a supported video source.' }, { status: 400 })
 
   const guestId = await getGuestId()
   const id = randomUUID()

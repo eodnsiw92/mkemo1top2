@@ -6,8 +6,44 @@ import { roomEvents, roomMembers, roomMessages, rooms } from '@/lib/db/schema'
 import { getGuestId, guestDisplayName, verifyInviteToken } from '@/lib/guest-session'
 import { getRoomAccess } from '@/lib/room-access'
 import { getPlayableSource } from '@/lib/media-url'
-import { containsProhibitedSearch } from '@/lib/content-safety'
+import { cleanMessage, containsProhibitedSearch } from '@/lib/content-safety'
 import { isSameOriginRequest } from '@/lib/request-origin'
+
+async function getPlaybackTitle(mediaUrl: string) {
+  const playable = getPlayableSource(mediaUrl)
+  if (!playable) return 'Watch together'
+
+  let title = ''
+  if (playable.kind === 'youtube') {
+    try {
+      const embedUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(playable.id)}`
+      const response = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(embedUrl)}&format=json`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(3500),
+      })
+      if (response.ok) {
+        const metadata: unknown = await response.json()
+        if (metadata && typeof metadata === 'object' && 'title' in metadata && typeof metadata.title === 'string') {
+          title = metadata.title
+        }
+      }
+    } catch {
+      title = 'YouTube video'
+    }
+    if (!title) title = 'YouTube video'
+  } else {
+    try {
+      const filename = decodeURIComponent(new URL(playable.url).pathname.split('/').pop() ?? '')
+      title = filename.replace(/\.[^.]+$/, '').replace(/[._-]+/g, ' ').trim()
+    } catch {
+      title = 'Video'
+    }
+    if (!title) title = 'Video'
+  }
+
+  const safeTitle = cleanMessage(title).slice(0, 60)
+  return safeTitle && !containsProhibitedSearch(safeTitle) ? safeTitle : 'Video'
+}
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ roomId: string }> }) {
   const { roomId } = await context.params
@@ -92,8 +128,9 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ r
     return NextResponse.json({ error: 'Choose a supported secure video link and playback position.' }, { status: 400 })
   }
   const playbackUpdatedAt = new Date()
-  await db.update(rooms).set({ mediaUrl, playbackPosition: position, isPlaying, playbackUpdatedAt, updatedAt: playbackUpdatedAt }).where(eq(rooms.id, roomId))
-  return NextResponse.json({ mediaUrl, position, isPlaying, playbackUpdatedAt })
+  const title = mediaUrl ? await getPlaybackTitle(mediaUrl) : 'Watch together'
+  await db.update(rooms).set({ title, mediaUrl, playbackPosition: position, isPlaying, playbackUpdatedAt, updatedAt: playbackUpdatedAt }).where(eq(rooms.id, roomId))
+  return NextResponse.json({ title, mediaUrl, position, isPlaying, playbackUpdatedAt })
 }
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ roomId: string }> }) {
