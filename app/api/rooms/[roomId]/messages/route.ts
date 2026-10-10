@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ro
   const input = payload as { text?: unknown; attachmentPath?: unknown }
   const text = typeof input.text === 'string' ? cleanMessage(input.text).slice(0, 2000) : ''
   const attachmentPath = typeof input.attachmentPath === 'string' && input.attachmentPath.startsWith(`room-media/${roomId}/`) ? input.attachmentPath : null
-  if (!text && !attachmentPath) return NextResponse.json({ error: 'Write a message or attach a GIF.' }, { status: 400 })
+  if (!text && !attachmentPath) return NextResponse.json({ error: 'Write a message or attach media.' }, { status: 400 })
   if (containsProhibitedSearch(text)) return NextResponse.json({ error: 'Pornographic or adult content is not allowed in room chat.' }, { status: 422 })
 
   const cutoff = new Date(Date.now() - 10_000)
@@ -41,5 +41,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ro
     text: message.body,
     createdAt: message.createdAt,
     attachmentUrl: message.attachmentPath ? `/api/rooms/${encodeURIComponent(roomId)}/media?pathname=${encodeURIComponent(message.attachmentPath)}` : null,
+    attachmentKind: message.attachmentPath && /\.(mp4|webm)$/i.test(message.attachmentPath) ? 'video' : message.attachmentPath ? 'image' : null,
   } }, { status: 201, headers: { 'Cache-Control': 'no-store' } })
 }

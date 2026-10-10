@@ -3,7 +3,6 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import {
   ArrowLeft,
-  AudioLines,
   Globe2,
   Heart,
   History,
@@ -43,7 +42,6 @@ const leftServices: MediaService[] = [
   { name: 'twitch', icon: Radio, logo: 'twitch/default', tone: 'twitch' },
   { name: 'Playlist', icon: ListMusic, tone: 'playlist' },
   { name: 'Photos', icon: Images, logo: 'google-photos/default', tone: 'photos' },
-  { name: 'rAVe DJ', icon: AudioLines, tone: 'rave' },
   { name: 'Likes', icon: Heart, tone: 'likes' },
 ]
 
@@ -116,12 +114,11 @@ export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpe
 
         <div className="media-hub-section-heading">
           <div><h2>{isArabic ? 'منصاتك واختصاراتك' : 'Your platforms & shortcuts'}</h2><p>{isArabic ? 'اختر وجهتك لفتح البحث الرسمي' : 'Choose a destination to open its official search'}</p></div>
-          <span>{isArabic ? '١٦ وجهة' : '16 DESTINATIONS'}</span>
+          <span>{isArabic ? '١٥ وجهة' : '15 DESTINATIONS'}</span>
         </div>
 
-        <div className="media-service-columns">
-          <div className="media-service-column" aria-label={isArabic ? 'منصات الوسائط' : 'Media services'}>{leftServices.map(renderService)}</div>
-          <div className="media-service-column" aria-label={isArabic ? 'منصات الوسائط' : 'Media services'}>{rightServices.map(renderService)}</div>
+        <div className="media-service-grid" aria-label={isArabic ? 'منصات الوسائط' : 'Media services'}>
+          {[...leftServices, ...rightServices].map(renderService)}
         </div>
 
         <p className="media-hub-note">{isArabic ? 'سيُفتح المحتوى على موقع الخدمة الرسمي. استخدم اشتراكك وحسابك الخاص.' : 'Services open on their official websites. Use your own account and subscription.'}</p>

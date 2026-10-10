@@ -7,6 +7,7 @@ export type RoomFeedMessage = {
   text: string
   createdAt: string
   attachmentUrl: string | null
+  attachmentKind: 'image' | 'video' | null
 }
 
 export type RoomFeedEvent = {

@@ -72,6 +72,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ ro
       text: message.body,
       createdAt: message.createdAt,
       attachmentUrl: message.attachmentPath ? `/api/rooms/${encodeURIComponent(roomId)}/media?pathname=${encodeURIComponent(message.attachmentPath)}` : null,
+      attachmentKind: message.attachmentPath && /\.(mp4|webm)$/i.test(message.attachmentPath) ? 'video' : message.attachmentPath ? 'image' : null,
     })),
     events: events.reverse().map((event) => ({ id: event.id, name: event.displayName, action: event.eventType, createdAt: event.createdAt })),
   }, { headers: { 'Cache-Control': 'no-store' } })

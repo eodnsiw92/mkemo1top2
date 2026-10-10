@@ -14,11 +14,11 @@ type RoomChatPanelProps = {
 
 export function RoomChatPanel({ roomId, locale, feed, onRefresh, onNotice }: RoomChatPanelProps) {
   const [draft, setDraft] = useState('')
-  const [selectedGif, setSelectedGif] = useState<File | null>(null)
+  const [selectedMedia, setSelectedMedia] = useState<File | null>(null)
   const [sending, setSending] = useState(false)
   const [translatingId, setTranslatingId] = useState('')
   const [translations, setTranslations] = useState<Record<string, string>>({})
-  const gifInput = useRef<HTMLInputElement>(null)
+  const mediaInput = useRef<HTMLInputElement>(null)
   const messages = feed?.messages ?? []
   const events = feed?.events ?? []
   const activity = useMemo(() => [
@@ -26,28 +26,28 @@ export function RoomChatPanel({ roomId, locale, feed, onRefresh, onNotice }: Roo
     ...events.map((event) => ({ kind: 'event' as const, at: event.createdAt, value: event })),
   ].sort((left, right) => new Date(left.at).getTime() - new Date(right.at).getTime()), [events, messages])
 
-  function selectGif(event: ChangeEvent<HTMLInputElement>) {
+  function selectMedia(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
-    if (!['image/gif', 'image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 4 * 1024 * 1024) {
-      onNotice(locale === 'ar' ? 'اختر GIF أو صورة بحجم لا يتجاوز 4 ميغابايت.' : 'Choose a GIF or image no larger than 4 MB.')
+    if (!['image/gif', 'image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'].includes(file.type) || file.size > 4 * 1024 * 1024) {
+      onNotice(locale === 'ar' ? 'اختار GIF أو صورة أو فيديو MP4/WebM لحد 4 ميجابايت.' : 'Choose a GIF, photo, or MP4/WebM video up to 4 MB.')
       event.target.value = ''
       return
     }
-    setSelectedGif(file)
+    setSelectedMedia(file)
     event.target.value = ''
   }
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const text = draft.trim()
-    if ((!text && !selectedGif) || sending) return
+    if ((!text && !selectedMedia) || sending) return
     setSending(true)
     try {
       let attachmentPath: string | undefined
-      if (selectedGif) {
+      if (selectedMedia) {
         const formData = new FormData()
-        formData.set('file', selectedGif)
+        formData.set('file', selectedMedia)
         const upload = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/media`, { method: 'POST', body: formData })
         const uploadResult = await upload.json()
         if (!upload.ok) throw new Error(uploadResult.error || 'GIF upload failed.')
@@ -64,7 +64,7 @@ export function RoomChatPanel({ roomId, locale, feed, onRefresh, onNotice }: Roo
         throw new Error(result.error || 'Message could not be sent.')
       }
       setDraft('')
-      setSelectedGif(null)
+      setSelectedMedia(null)
       onRefresh()
     } catch (error) {
       onNotice(error instanceof Error ? error.message : 'Message could not be sent.')
@@ -107,11 +107,11 @@ export function RoomChatPanel({ roomId, locale, feed, onRefresh, onNotice }: Roo
     </div>
     <form className="chat-compose" onSubmit={sendMessage}>
       <input aria-label={locale === 'ar' ? 'اكتب رسالة' : 'Write a message'} placeholder={locale === 'ar' ? 'اكتب شي لطيف...' : 'Say something nice...'} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} />
-      <button type="button" aria-label={locale === 'ar' ? 'إرفاق GIF أو صورة' : 'Attach a GIF or photo'} onClick={() => gifInput.current?.click()}><ImagePlus size={16} /></button>
-      <button className="send-message" type="submit" aria-label={locale === 'ar' ? 'إرسال الرسالة' : 'Send message'} disabled={sending || (!draft.trim() && !selectedGif)}>{sending ? <LoaderCircle className="spin" size={14} /> : <Send size={14} />}</button>
-      <input ref={gifInput} className="visually-hidden-input" type="file" accept="image/gif,image/jpeg,image/png,image/webp" onChange={selectGif} aria-label={locale === 'ar' ? 'اختر GIF أو صورة' : 'Choose a GIF or photo'} />
+      <button type="button" aria-label={locale === 'ar' ? 'إرفاق GIF أو صورة' : 'Attach a GIF or photo'} onClick={() => mediaInput.current?.click()}><ImagePlus size={16} /></button>
+      <button className="send-message" type="submit" aria-label={locale === 'ar' ? 'إرسال الرسالة' : 'Send message'} disabled={sending || (!draft.trim() && !selectedMedia)}>{sending ? <LoaderCircle className="spin" size={14} /> : <Send size={14} />}</button>
+      <input ref={mediaInput} className="visually-hidden-input" type="file" accept="image/gif,image/jpeg,image/png,image/webp" onChange={selectGif} aria-label={locale === 'ar' ? 'اختر GIF أو صورة' : 'Choose a GIF or photo'} />
     </form>
-    {selectedGif && <div className="selected-gif"><span>{selectedGif.name}</span><button type="button" onClick={() => setSelectedGif(null)}>{locale === 'ar' ? 'إزالة' : 'Remove'}</button></div>}
+    {selectedMedia && <div className="selected-gif"><span>{selectedMedia.name}</span><button type="button" onClick={() => setSelectedMedia(null)}>{locale === 'ar' ? 'إزالة' : 'Remove'}</button></div>}
     <p className="preview-caption"><MessageCircle size={13} /> {locale === 'ar' ? 'الرسائل والصور وملفات GIF محفوظة داخل الغرفة. تُفحص الصور تلقائيًا قبل النشر؛ لا تشارك كلمات مرور البث.' : 'Messages and private GIFs/photos stay in this room. Uploads are automatically screened; never share streaming passwords.'}</p>
   </div>
 }

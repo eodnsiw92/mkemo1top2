@@ -33,7 +33,6 @@ const shortcuts: Shortcut[] = [
   { id: 'drive', label: { ar: 'Google Drive', en: 'Google Drive' }, href: 'https://drive.google.com/', asset: `${logo}/google-drive/mono.svg`, wordmark: 'Drive' },
   { id: 'photos', label: { ar: 'Photos', en: 'Photos' }, href: 'https://photos.google.com/', icon: Images, wordmark: 'Photos' },
   { id: 'web', label: { ar: 'تصفح الويب', en: 'Browse the web' }, href: 'https://www.google.com/', icon: Globe2, wordmark: 'WEB' },
-  { id: 'rave-dj', label: { ar: 'rAVe DJ', en: 'rAVe DJ' }, href: 'https://ravedj.com/', wordmark: 'rAVe', suffix: 'DJ' },
   { id: 'karaoke', label: { ar: 'Karaoke', en: 'Karaoke' }, href: 'https://www.youtube.com/results?search_query=karaoke', icon: MicVocal, wordmark: 'Karaoke' },
   { id: 'likes', label: { ar: 'Likes', en: 'Likes' }, href: 'https://www.youtube.com/playlist?list=LL', icon: Heart, wordmark: 'Likes' },
   { id: 'history', label: { ar: 'History', en: 'History' }, href: 'https://www.youtube.com/feed/history', icon: HistoryIcon, wordmark: 'History' },
