@@ -869,7 +869,7 @@ button { color: inherit; }
   --service-soft: rgba(139, 117, 255, .16);
   border-inline-start: 2px solid var(--service-brand);
 }
-.media-service-youtube, .media-service-youtube-live { --service-brand: #ff0033; --service-soft: rgba(255, 0, 51, .18); }
+.media-service-youtube, .media-service-youtube-live { --service-brand: #ff0000; --service-soft: rgba(255, 0, 0, .16); }
 .media-service-netflix { --service-brand: #e50914; --service-soft: rgba(229, 9, 20, .18); }
 .media-service-crunchyroll { --service-brand: #f47521; --service-soft: rgba(244, 117, 33, .18); }
 .media-service-twitch { --service-brand: #9146ff; --service-soft: rgba(145, 70, 255, .2); }
@@ -885,13 +885,15 @@ button { color: inherit; }
 .media-service-history { --service-brand: #c49a56; --service-soft: rgba(196, 154, 86, .18); }
 .media-service:hover { border-color: var(--service-brand); background: linear-gradient(105deg, var(--service-soft), rgba(9, 5, 40, .35)); }
 .media-service-mark { background: var(--service-brand); }
+.media-service-youtube .media-service-mark, .media-service-youtube-live .media-service-mark { background: #fff; }
+.media-service-youtube .media-service-mark img, .media-service-youtube-live .media-service-mark img { width: 30px; height: 22px; filter: none; }
 .media-service-action { background: var(--service-soft); color: #fff; }
 .media-service-photos .media-service-mark, .media-service-drive .media-service-mark { background: #fff; }
 .media-service-photos .media-service-mark img, .media-service-drive .media-service-mark img { filter: none; }
 .media-service-x .media-service-mark { background: #090909; }
 .media-service-x .media-service-action { background: rgba(255, 255, 255, .12); }
 
-.media-hub-provider-mark.media-service-youtube, .media-hub-provider-mark.media-service-youtube-live { background: #ff0033; border-color: rgba(255,74,96,.8); }
+.media-hub-provider-mark.media-service-youtube, .media-hub-provider-mark.media-service-youtube-live { background: #fff; border-color: rgba(255,255,255,.85); }
 .media-hub-provider-mark.media-service-netflix { background: #e50914; border-color: rgba(255, 75, 83, .75); }
 .media-hub-provider-mark.media-service-crunchyroll { background: #f47521; border-color: rgba(255, 175, 103, .75); }
 .media-hub-provider-mark.media-service-twitch { background: #9146ff; border-color: rgba(183, 139, 255, .75); }
@@ -899,7 +901,7 @@ button { color: inherit; }
 .media-hub-provider-mark.media-service-tubi { background: #fa3c54; border-color: rgba(255, 134, 149, .75); }
 .media-hub-provider-mark.media-service-photos, .media-hub-provider-mark.media-service-drive { background: #fff; }
 .media-hub-provider-mark.media-service-youtube img,
-.media-hub-provider-mark.media-service-youtube-live img { filter: brightness(0) invert(1); }
+.media-hub-provider-mark.media-service-youtube-live img { filter: none; }
 .media-hub-provider-mark.media-service-netflix img,
 .media-hub-provider-mark.media-service-crunchyroll img,
 .media-hub-provider-mark.media-service-twitch img,

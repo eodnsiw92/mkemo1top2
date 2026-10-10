@@ -54,7 +54,7 @@ export function WatchRoom() {
   const [time, setTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [panel, setPanel] = useState<Panel>(null)
-  const [view, setView] = useState<'home' | 'room' | 'profile' | 'search' | 'youtube-browser'>('home')
+  const [view, setView] = useState<'home' | 'room' | 'profile' | 'search' | 'youtube-browser'>('search')
   const [locale, setLocale] = useState<'ar' | 'en'>('ar')
   const [mediaSearchQuery, setMediaSearchQuery] = useState('')
   const [mediaTitle, setMediaTitle] = useState<{ url: string; title: string } | null>(null)
@@ -69,6 +69,7 @@ export function WatchRoom() {
   const [saved, setSaved] = useState(true)
   const appliedPlaybackRef = useRef('')
   const playbackUpdateTimeRef = useRef(0)
+  const initialInviteHandledRef = useRef(false)
   const { data: roomFeed, mutate: refreshRoomFeed } = useRoomFeed(activeRoomId)
   const messages = roomFeed?.messages ?? []
   const members = roomFeed?.members ?? []
@@ -82,7 +83,13 @@ export function WatchRoom() {
     document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr'
     const url = new URL(window.location.href)
     const roomId = url.searchParams.get('room')
-    if (roomId) setPendingInvite({ roomId, inviteToken: url.searchParams.get('invite') ?? '' })
+    if (roomId) {
+      setPendingInvite({ roomId, inviteToken: url.searchParams.get('invite') ?? '' })
+      if (!initialInviteHandledRef.current) {
+        initialInviteHandledRef.current = true
+        setView('home')
+      }
+    }
     const searchState = url.searchParams.get('search')
     if (searchState === 'blocked') setNotice(locale === 'ar' ? 'البحث عن المحتوى الإباحي غير مسموح.' : 'Pornographic searches are not allowed.')
     if (searchState === 'invalid') setNotice(locale === 'ar' ? 'اكتب عنوان فيديو صحيحًا.' : 'Enter a valid video title.')
@@ -182,7 +189,7 @@ export function WatchRoom() {
     setActiveRoomId(null)
     setActiveInviteToken('')
     setPanel(null)
-    setView('home')
+    setView('search')
   }
 
   async function toggleRoomVisibility() {
@@ -485,7 +492,7 @@ export function WatchRoom() {
       </div>
       <div className="mobile-panel-scrim" aria-hidden="true" onClick={() => setPanel(null)} />
       <footer className="room-footer"><span><span className="footer-live" /> {locale === 'ar' ? 'غرفة mkemo' : 'mkemo room'} <b>{activeRoomId?.slice(0, 8).toUpperCase()}</b></span><span className="footer-copyright">{locale === 'ar' ? 'مساحة للحظات اللي تحبونها.' : 'A room for the things you love.'}</span><button type="button" onClick={shareRoom}><Share2 size={14} /> {locale === 'ar' ? 'مشاركة الغرفة' : 'Share room'}</button></footer>
-    </> : <ProfilePanel locale={locale} profileImage={profileImage} posts={posts} onBack={() => setView(activeRoomId ? 'room' : 'home')} onNotice={showNotice} onPhotoChange={selectPhoto} />}
+    </> : <ProfilePanel locale={locale} profileImage={profileImage} posts={posts} onBack={() => setView(activeRoomId ? 'room' : 'search')} onNotice={showNotice} onPhotoChange={selectPhoto} />}
 
 
     {notice && <div className="notice-toast" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label={locale === 'ar' ? 'إغلاق الإشعار' : 'Dismiss notification'}><X size={15} /></button></div>}
