@@ -148,7 +148,7 @@ export function MediaStage({
         unsupported: 'يعرض هذا المصدر عناصر التحكم الخاصة به وقد لا تتم مزامنته مع الغرفة.',
         buffering: 'جارٍ تحميل الفيديو…',
         loadError: 'تعذّر تشغيل هذا المصدر. افتحه من زر المصدر.',
-        frameRateNote: 'تتوفر 4K/240fps فقط عندما يدعمها المصدر والجهاز والشاشة.',
+        frameRateNote: 'تتوفر 4K/240fps فقط عندما يدعمها المصدر والجهاز والشاشة؛ وتعتمد جودة الصوت على المصدر والجهاز.',
         position: 'موضع التشغيل',
       }
     : {
@@ -173,7 +173,7 @@ export function MediaStage({
         unsupported: 'This source uses its own controls and may not sync with the room.',
         buffering: 'Loading video…',
         loadError: 'This source could not be played here. Open it from the source button.',
-        frameRateNote: '4K/240fps is available only when the source, device, and display support it.',
+        frameRateNote: '4K/240fps is available only when the source, device, and display support it; audio quality depends on the source and device.',
         position: 'Playback position',
       }
   const sourceInfo = mediaUrl ? getPlayableSource(mediaUrl) : null
@@ -378,9 +378,9 @@ export function MediaStage({
         </>
       ) : (
         <>
-          <img className="stage-backdrop" src="/cinema-still.png" alt="A traveler looking over a city at sunset" />
+          <img className="stage-backdrop" src="/cinema-still.png" alt={isArabic ? 'مسافر يطل على مدينة عند الغروب' : 'A traveler looking over a city at sunset'} />
           <div className="stage-tint" />
-          <div className="stage-film-info"><span>TONIGHT&apos;S PICK <i /> ORIGINAL PREVIEW</span><h2>The Last City</h2><p>When the lights go out, their story begins.</p><div className="film-tags"><span>Sci-fi</span><span>Movie night</span><span className="rating">★ 8.7</span></div></div>
+          <div className="stage-film-info"><span>{isArabic ? 'اختيار الليلة' : "TONIGHT'S PICK"} <i /> {isArabic ? 'معاينة أصلية' : 'ORIGINAL PREVIEW'}</span><h2>{isArabic ? 'المدينة الأخيرة' : 'The Last City'}</h2><p>{isArabic ? 'حين تنطفئ الأنوار، تبدأ حكايتهم.' : 'When the lights go out, their story begins.'}</p><div className="film-tags"><span>{isArabic ? 'خيال علمي' : 'Sci-fi'}</span><span>{isArabic ? 'سهرة مشاهدة' : 'Movie night'}</span><span className="rating">★ 8.7</span></div></div>
           <button className="stage-play-button" type="button" disabled={!controlsEnabled} onClick={() => onNotice(isArabic ? 'ألصق رابط فيديو آمنًا لبدء المشاهدة.' : 'Paste a secure video link above to start watching.')} aria-label={isArabic ? 'ابدأ المشاهدة' : 'Start watching'}><Play size={24} fill="currentColor" /></button>
         </>
       )}

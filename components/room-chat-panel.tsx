@@ -17,8 +17,9 @@ export function RoomChatPanel({ roomId, locale, feed, onRefresh, onNotice }: Roo
   const [draft, setDraft] = useState('')
   const [selectedMedia, setSelectedMedia] = useState<File | null>(null)
   const [sending, setSending] = useState(false)
-  const [translatingId, setTranslatingId] = useState('')
+  const [translatingKeys, setTranslatingKeys] = useState<Record<string, boolean>>({})
   const [translations, setTranslations] = useState<Record<string, string>>({})
+  const [visibleTranslations, setVisibleTranslations] = useState<Record<string, boolean>>({})
   const mediaInput = useRef<HTMLInputElement>(null)
   const messages = feed?.messages ?? []
   const events = feed?.events ?? []
@@ -75,35 +76,65 @@ export function RoomChatPanel({ roomId, locale, feed, onRefresh, onNotice }: Roo
   }
 
   async function translateMessage(id: string, text: string) {
-    if (translations[id]) return
-    setTranslatingId(id)
+    const targetLocale = locale
+    const translationKey = `${id}:${targetLocale}`
+    if (translations[translationKey]) {
+      setVisibleTranslations((current) => ({ ...current, [translationKey]: !current[translationKey] }))
+      return
+    }
+    if (translatingKeys[translationKey]) return
+    setTranslatingKeys((current) => ({ ...current, [translationKey]: true }))
     try {
       const response = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, text, targetLanguage: locale }),
+        body: JSON.stringify({ roomId, text, targetLanguage: targetLocale }),
       })
       const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Translation failed.')
-      setTranslations((current) => ({ ...current, [id]: result.translation }))
+      if (!response.ok || typeof result.translation !== 'string' || !result.translation.trim()) {
+        throw new Error(result.error || (targetLocale === 'ar' ? 'تعذرت ترجمة الرسالة.' : 'Translation failed.'))
+      }
+      setTranslations((current) => ({ ...current, [translationKey]: result.translation.trim() }))
+      setVisibleTranslations((current) => ({ ...current, [translationKey]: true }))
     } catch (error) {
-      onNotice(error instanceof Error ? error.message : 'Translation failed.')
+      onNotice(error instanceof Error ? error.message : (targetLocale === 'ar' ? 'تعذرت ترجمة الرسالة.' : 'Translation failed.'))
     } finally {
-      setTranslatingId('')
+      setTranslatingKeys((current) => {
+        const next = { ...current }
+        delete next[translationKey]
+        return next
+      })
     }
   }
 
   return <div className="chat-panel-content">
     <div className="chat-day">{locale === 'ar' ? 'نشاط الغرفة' : 'ROOM ACTIVITY'} <span /> {locale === 'ar' ? 'مباشر' : 'LIVE'}</div>
     <div className="chat-messages" role="log" aria-label={locale === 'ar' ? 'رسائل الغرفة' : 'Room chat messages'} aria-live="polite">
-      {activity.map((item) => item.kind === 'event' ? <p className="room-event" key={`event-${item.value.id}`}><span />{locale === 'ar' ? `${item.value.name} ${item.value.action === 'joined' ? 'انضم إلى الغرفة' : 'غادر الغرفة'}` : `${item.value.name} ${item.value.action} the room`}</p> : <article className={`chat-message${item.value.guestId === feed?.currentGuestId ? ' own' : ''}`} key={`message-${item.value.id}`}>
-        <div className="chat-bubble-wrap"><div className="chat-meta"><strong className="chat-user-name"><CountryName name={item.value.name} /></strong><time dateTime={item.value.createdAt}>{new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(new Date(item.value.createdAt))}</time></div>
-          {item.value.text && <p>{item.value.text}</p>}
-          {item.value.attachmentUrl && (item.value.attachmentKind === 'video' ? <video className="chat-gif" src={item.value.attachmentUrl} controls playsInline preload="metadata" aria-label={locale === 'ar' ? 'فيديو أرسله أحد أعضاء الغرفة' : 'Video shared in the room'} /> : <img className="chat-gif" src={item.value.attachmentUrl} alt={locale === 'ar' ? 'صورة أو GIF أرسلها أحد أعضاء الغرفة' : 'Photo or GIF shared in the room'} loading="lazy" />)}
-          {translations[item.value.id] && <p className="chat-translation" lang={locale}>{translations[item.value.id]}</p>}
-          <div className="chat-message-actions"><button type="button" aria-label={locale === 'ar' ? 'نسخ الرسالة' : 'Copy message'} onClick={() => { void navigator.clipboard.writeText(item.value.text).then(() => onNotice(locale === 'ar' ? 'تم نسخ الرسالة.' : 'Message copied.')).catch(() => onNotice(locale === 'ar' ? 'تعذر نسخ الرسالة.' : 'Could not copy message.')) }} disabled={!item.value.text}><Copy size={12} /><span>{locale === 'ar' ? 'نسخ' : 'Copy'}</span></button><button type="button" aria-label={locale === 'ar' ? 'ترجمة الرسالة' : 'Translate message'} onClick={() => void translateMessage(item.value.id, item.value.text)} disabled={!item.value.text || Boolean(translations[item.value.id]) || translatingId === item.value.id}>{translatingId === item.value.id ? <LoaderCircle size={12} className="spin" /> : <Languages size={12} />}<span>{locale === 'ar' ? 'ترجمة' : 'Translate'}</span></button></div>
-        </div>
-      </article>)}
+      {activity.map((item) => {
+        if (item.kind === 'event') {
+          return <p className="room-event" key={`event-${item.value.id}`} dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}><span />{locale === 'ar' ? `${item.value.name} ${item.value.action === 'joined' ? 'انضم إلى الغرفة' : 'غادر الغرفة'}` : `${item.value.name} ${item.value.action} the room`}</p>
+        }
+
+        const message = item.value
+        const translationKey = `${message.id}:${locale}`
+        const translation = translations[translationKey]
+        const isTranslating = Boolean(translatingKeys[translationKey])
+        const isTranslationVisible = Boolean(translation && visibleTranslations[translationKey])
+        const translationAction = isTranslationVisible
+          ? (locale === 'ar' ? 'إخفاء الترجمة' : 'Hide translation')
+          : translation
+            ? (locale === 'ar' ? 'عرض الترجمة' : 'Show translation')
+            : (locale === 'ar' ? 'ترجم إلى العربية' : 'Translate to English')
+
+        return <article className={`chat-message${message.guestId === feed?.currentGuestId ? ' own' : ''}`} key={`message-${message.id}`}>
+          <div className="chat-bubble-wrap"><div className="chat-meta"><strong className="chat-user-name"><CountryName name={message.name} /></strong><time dateTime={message.createdAt}>{new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(new Date(message.createdAt))}</time></div>
+            {message.text && <p dir="auto">{message.text}</p>}
+            {message.attachmentUrl && (message.attachmentKind === 'video' ? <video className="chat-gif" src={message.attachmentUrl} controls playsInline preload="metadata" aria-label={locale === 'ar' ? 'فيديو أرسله أحد أعضاء الغرفة' : 'Video shared in the room'} /> : <img className="chat-gif" src={message.attachmentUrl} alt={locale === 'ar' ? 'صورة أو GIF أرسلها أحد أعضاء الغرفة' : 'Photo or GIF shared in the room'} loading="lazy" />)}
+            {isTranslationVisible && translation && <p className="chat-translation" role="status" aria-label={locale === 'ar' ? 'الترجمة العربية' : 'English translation'} dir={locale === 'ar' ? 'rtl' : 'ltr'} lang={locale}>{translation}</p>}
+            <div className="chat-message-actions"><button type="button" aria-label={locale === 'ar' ? 'نسخ الرسالة' : 'Copy message'} onClick={() => { void navigator.clipboard.writeText(message.text).then(() => onNotice(locale === 'ar' ? 'تم نسخ الرسالة.' : 'Message copied.')).catch(() => onNotice(locale === 'ar' ? 'تعذر نسخ الرسالة.' : 'Could not copy message.')) }} disabled={!message.text}><Copy size={12} /><span>{locale === 'ar' ? 'نسخ' : 'Copy'}</span></button><button type="button" aria-label={translationAction} aria-pressed={isTranslationVisible} onClick={() => void translateMessage(message.id, message.text)} disabled={!message.text || isTranslating}>{isTranslating ? <LoaderCircle size={12} className="spin" /> : <Languages size={12} />}<span>{isTranslating ? (locale === 'ar' ? 'جارٍ الترجمة…' : 'Translating…') : translationAction}</span></button></div>
+          </div>
+        </article>
+      })}
       {activity.length === 0 && <p className="chat-empty"><MessageCircle size={18} />{locale === 'ar' ? 'ابدأوا المحادثة، رسائلكم تظهر للجميع في الغرفة.' : 'Start the conversation. Room messages sync for everyone here.'}</p>}
     </div>
     <form className="chat-compose" onSubmit={sendMessage}>
