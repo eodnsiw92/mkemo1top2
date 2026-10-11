@@ -174,10 +174,6 @@ export function ProfilePanel({ locale, profileImage, posts, onBack, onNotice, on
         </div>}
       </section>
 
-      <a className="profile-whatsapp-support" href="https://wa.me/9647802577711" target="_blank" rel="noopener noreferrer" aria-label={isArabic ? 'تواصل مع فريق الدعم عبر واتساب' : 'Contact the support team on WhatsApp'}>
-        <span className="profile-whatsapp-mark"><img src="/whatsapp-mark.svg" alt="" /></span>
-        <span className="profile-whatsapp-label"><strong>{isArabic ? 'دعم واتساب' : 'WhatsApp support'}</strong><small>{isArabic ? 'راسل فريقنا مباشرة' : 'Chat with our team'}</small></span>
-      </a>
       <input className="visually-hidden-input" ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPhotoChange} aria-label={isArabic ? 'اختار صورة للملف الشخصي أو المعرض' : 'Choose a profile or gallery photo'} />
       <p className="profile-dashboard-legal">{isArabic ? 'التعديلات والصور دي للمعاينة في الجلسة دي.' : 'Profile edits and photos are a preview for this session.'}</p>
     </section>

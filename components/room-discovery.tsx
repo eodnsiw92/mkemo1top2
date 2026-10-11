@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import useSWR from 'swr'
 import { Activity, ChevronDown, ChevronLeft, Globe2, Languages, Play, Plus, Search, ShieldCheck, UsersRound, X } from 'lucide-react'
+import { PlatformShortcuts } from '@/components/platform-shortcuts'
 import { RoomThumbnail } from '@/components/room-thumbnail'
 
 type DiscoverRoom = {
@@ -36,19 +37,19 @@ const fetcher = async (url: string) => {
 
 const copy = {
   ar: {
-    language: 'English', tagline: 'مكانكم للأفلام والأنمي واللحظات الحلوة', headline: 'شاهدوا سوا.',
+    language: 'English', tagline: 'مكانكم للأفلام والأنمي واللحظات الحلوة', headline: 'شاهدوا سوا.',     search: 'بحث',
     sourceLabel: 'مصدر المشاهدة', allPlatforms: 'كل المنصات', choosePlatform: 'اختر منصة المشاهدة', visibility: 'ظهور الغرفة', public: 'عام', private: 'خاصة',
     listTitle: 'غرف تستاهل المشاهدة', listSubtitle: 'اختاروا الليلة اللي على مزاجكم', preview: 'مباشر', startedBy: 'غرفة', watching: 'مشاهدين',
     emptyTitle: 'ما فيه غرف عامة للحين', emptyDescription: 'أنشئ غرفة وادع أصحابك عشان تبدأون المشاهدة سوا.', legal: 'كل شخص يستخدم اشتراكه الخاص. المنصات المحمية تفتح رسميًا بدون مشاركة كلمات المرور أو تجاوز DRM.',
-    fps: 'دقة 4K و240fps عند دعم المصدر والجهاز والشاشة.', create: 'إنشاء غرفة مشاهدة', invite: 'دعوة أصدقاء',
+    fps: 'سلاسة تصل إلى 120 إطار/ث عند دعم الجهاز والمتصفح ومصدر الفيديو.', create: 'إنشاء غرفة مشاهدة', invite: 'دعوة أصدقاء',
     createTitle: 'جهّزوا سهرتكم', createDescription: 'أنشئوا الغرفة، ثم حمّلوا الفيديو ليظهر عنوانه تلقائيًا.', createRoom: 'إنشاء الغرفة', close: 'إغلاق', joinInvite: 'انضم إلى الغرفة الخاصة',
   },
   en: {
-    language: 'العربية', tagline: 'Movies, anime, and good nights belong together', headline: 'Watch together.',
+    language: 'العربية', tagline: 'Movies, anime, and good nights belong together', headline: 'Watch together.',     search: 'Search',
     sourceLabel: 'WATCH FROM', allPlatforms: 'All platforms', choosePlatform: 'Choose a streaming platform', visibility: 'ROOM VISIBILITY', public: 'Public', private: 'Private',
     listTitle: 'Rooms worth watching', listSubtitle: 'Pick tonight’s mood', preview: 'LIVE ROOMS', startedBy: 'Room', watching: 'watching',
     emptyTitle: 'No public rooms yet', emptyDescription: 'Create a room and invite friends to start watching together.', legal: 'Everyone uses their own subscription. Protected services open officially; passwords are never shared and DRM is never bypassed.',
-    fps: '4K resolution and 240fps when supported by the source, device, and display.', create: 'Create a watch room', invite: 'Invite friends',
+    fps: 'Up to 120 fps when supported by the device, browser, and video source.', create: 'Create a watch room', invite: 'Invite friends',
     createTitle: 'Set up your watch night', createDescription: 'Create the room, then load a video to use its title automatically.', createRoom: 'Create room', close: 'Close', joinInvite: 'Join private room',
   },
 } as const
@@ -57,16 +58,21 @@ export function RoomDiscovery({ locale, onToggleLocale, onOpenProfile, onOpenSea
   const t = copy[locale]
   const { data } = useSWR<{ rooms: DiscoverRoom[] }>('/api/rooms', fetcher, { refreshInterval: 8000, revalidateOnFocus: true })
   const rooms = data?.rooms ?? []
+  const [query, setQuery] = useState('')
   const [selectedPlatform, setSelectedPlatform] = useState('الكل')
   const [platformMenuOpen, setPlatformMenuOpen] = useState(false)
   const [isPublic, setIsPublic] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
   const [connectMenuOpen, setConnectMenuOpen] = useState(false)
 
-  const filteredRooms = useMemo(
-    () => rooms.filter((room) => selectedPlatform === 'الكل' || room.source === selectedPlatform),
-    [rooms, selectedPlatform],
-  )
+  const filteredRooms = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase('ar')
+    return rooms.filter((room) => {
+      const matchesPlatform = selectedPlatform === 'الكل' || room.source === selectedPlatform
+      const matchesQuery = !normalizedQuery || `${room.title} ${room.source}`.toLocaleLowerCase(locale).includes(normalizedQuery)
+      return matchesPlatform && matchesQuery
+    })
+  }, [locale, query, rooms, selectedPlatform])
 
   function createRoom(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -82,12 +88,20 @@ export function RoomDiscovery({ locale, onToggleLocale, onOpenProfile, onOpenSea
       <div className="discovery-content">
         <header className="discovery-header">
           <button className="discovery-profile-button" type="button" onClick={onOpenProfile} aria-label={locale === 'ar' ? 'الملف الشخصي' : 'Profile'}><span>م</span></button>
-          <div className="discovery-wordmark" aria-label="mkemo"><span className="discovery-mark"><Play size={19} fill="currentColor" /></span><span>mkemo</span></div>
+          <div className="discovery-wordmark" aria-label="mkemo"><span className="discovery-mark"><Play size={19} fill="currentColor" /></span><span>mkemo<span className="discovery-period">.</span></span></div>
           <div className="discovery-header-actions"><button className="discovery-search-button" type="button" onClick={() => onOpenSearch()} aria-label={locale === 'ar' ? 'فتح البحث والمنصات' : 'Open media search'}><Search size={17} /></button><button className="discovery-language-button" type="button" onClick={onToggleLocale} aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}><Languages size={16} /><span>{t.language}</span></button><button className="discovery-invite-button" type="button" onClick={() => setCreateOpen(true)} aria-label={t.invite}><UsersRound size={19} /></button></div>
         </header>
 
         <h1 className="sr-only">{t.headline}</h1>
         {hasInvite && <button className="discovery-invite-card" type="button" onClick={onAcceptInvite}><UsersRound size={18} /><span>{t.joinInvite}</span><ChevronLeft size={18} /></button>}
+
+        <form className="discovery-search" role="search" dir="ltr" onSubmit={(event) => { event.preventDefault(); const value = query.trim(); if (value) onOpenSearch(value) }}>
+          <button className="discovery-search-submit" type="submit" aria-label={locale === 'ar' ? 'بحث آمن عن فيديو' : 'Search videos safely'}><Search size={34} aria-hidden="true" /></button>
+          <input dir={locale === 'ar' ? 'rtl' : 'ltr'} aria-label={locale === 'ar' ? 'ابحث عن غرفة أو فيديو' : 'Search rooms or videos'} placeholder={t.search} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} />
+          {query && <button type="button" className="discovery-clear" aria-label={locale === 'ar' ? 'مسح البحث' : 'Clear search'} onClick={() => setQuery('')}><X size={18} /></button>}
+        </form>
+
+        <PlatformShortcuts locale={locale} onSelectPlatform={setSelectedPlatform} />
 
         <div className="discovery-connectivity">
           <button className="connectivity-trigger" type="button" aria-expanded={connectMenuOpen} aria-controls="connectivity-options" onClick={() => setConnectMenuOpen((open) => !open)}>
