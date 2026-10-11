@@ -35,6 +35,7 @@ import { CountryName } from '@/components/country-name'
 import { splitCountryFlag } from '@/lib/country'
 import { RoomDiscovery } from '@/components/room-discovery'
 import { MediaSearchHub } from '@/components/media-search-hub'
+import { YouTubeSearchBrowser, type YouTubeSearchResult } from '@/components/youtube-search-browser'
 import { useRoomFeed } from '@/lib/room-feed'
 import { containsProhibitedSearch } from '@/lib/content-safety'
 import { getPlayableSource } from '@/lib/media-url'
@@ -53,9 +54,10 @@ export function WatchRoom() {
   const [time, setTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [panel, setPanel] = useState<Panel>(null)
-  const [view, setView] = useState<'home' | 'room' | 'profile' | 'search'>('home')
+  const [view, setView] = useState<'home' | 'room' | 'profile' | 'search' | 'youtube-browser'>('home')
   const [locale, setLocale] = useState<'ar' | 'en'>('ar')
   const [mediaSearchQuery, setMediaSearchQuery] = useState('')
+  const [mediaTitle, setMediaTitle] = useState<{ url: string; title: string } | null>(null)
   const [roomPublic, setRoomPublic] = useState(false)
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
   const [activeInviteToken, setActiveInviteToken] = useState('')
@@ -71,6 +73,9 @@ export function WatchRoom() {
   const messages = roomFeed?.messages ?? []
   const members = roomFeed?.members ?? []
   const isRoomHost = Boolean(roomFeed?.members.some((member) => member.guestId === roomFeed.currentGuestId && member.isHost))
+  const roomTitle = roomFeed?.room.title && roomFeed.room.title !== 'Watch together'
+    ? roomFeed.room.title
+    : locale === 'ar' ? 'غرفة مشاهدة' : 'Watch together'
 
   useEffect(() => {
     document.documentElement.lang = locale
@@ -151,7 +156,7 @@ export function WatchRoom() {
     showNotice(locale === 'ar' ? 'انضممت إلى الغرفة.' : 'You joined the room.')
   }
 
-  async function createRoom(roomSource: string, isPublic: boolean) {
+  async function createRoom(roomSource: string, isPublic: boolean): Promise<string | null> {
     const response = await fetch('/api/rooms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -160,7 +165,7 @@ export function WatchRoom() {
     const result = await response.json()
     if (!response.ok) {
       showNotice(result.error || 'Unable to create this room.')
-      return
+      return null
     }
     setActiveRoomId(result.room.id)
     setActiveInviteToken(result.inviteToken)
@@ -169,6 +174,7 @@ export function WatchRoom() {
     setView('room')
     setPanel(null)
     showNotice(locale === 'ar' ? 'تم إنشاء الغرفة.' : 'Your room is ready.')
+    return result.room.id as string
   }
 
   function leaveActiveRoom() {
@@ -256,9 +262,23 @@ export function WatchRoom() {
     setView('search')
   }
 
+  function openYouTubeSearch(searchQuery = '') {
+    const value = searchQuery.trim()
+    if (value && containsProhibitedSearch(value)) {
+      showNotice(locale === 'ar' ? 'البحث عن هذا المحتوى غير مسموح.' : 'This search is not allowed.')
+      return
+    }
+    setMediaSearchQuery(value)
+    setView('youtube-browser')
+  }
+
   function openPlatformSearch(service: string, searchQuery: string) {
     if (service === 'Likes') {
       setView('profile')
+      return
+    }
+    if (service === 'YouTube') {
+      openYouTubeSearch(searchQuery)
       return
     }
     const params = new URLSearchParams({ source: service })
@@ -267,8 +287,51 @@ export function WatchRoom() {
   }
 
   function submitMediaSearch(searchQuery: string) {
-    const params = new URLSearchParams({ source: 'YouTube', query: searchQuery })
-    window.open(`/api/search?${params.toString()}`, '_blank', 'noopener,noreferrer')
+    openYouTubeSearch(searchQuery)
+  }
+
+  async function selectYouTubeResult(video: YouTubeSearchResult) {
+    const playable = getPlayableSource(`https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`)
+    if (!playable || playable.kind !== 'youtube') {
+      showNotice(locale === 'ar' ? 'تعذّر تشغيل هذا الفيديو.' : 'This video could not be played.')
+      return
+    }
+    if (activeRoomId && !isRoomHost) {
+      showNotice(locale === 'ar' ? 'مضيف الغرفة فقط يستطيع اختيار فيديو جديد.' : 'Only the room host can choose a new video.')
+      return
+    }
+
+    const isCreatingRoom = !activeRoomId
+    try {
+      const roomId = activeRoomId ?? await createRoom('YouTube', false)
+      if (!roomId) return
+
+      setMediaUrl(playable.url)
+      setMediaTitle({ url: playable.url, title: video.title })
+      setTime(0)
+      setDuration(0)
+      setPlaying(true)
+      setSource('YouTube')
+      setQuery('')
+      setView('room')
+
+      const response = await fetch(`/api/rooms/${encodeURIComponent(roomId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playback: { mediaUrl: playable.url, position: 0, isPlaying: true } }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setPlaying(false)
+        showNotice(result.error || 'Shared playback could not be updated.')
+        return
+      }
+      if (!isCreatingRoom) await refreshRoomFeed()
+      showNotice(locale === 'ar' ? 'يتم الآن تشغيل الفيديو داخل الغرفة.' : 'The video is now playing in your room.')
+    } catch {
+      setPlaying(false)
+      showNotice(locale === 'ar' ? 'تعذّر تحميل الفيديو في الغرفة. حاول مرة أخرى.' : 'The video could not be loaded into the room. Try again.')
+    }
   }
 
   function openSearch(event: FormEvent<HTMLFormElement>) {
@@ -298,10 +361,14 @@ export function WatchRoom() {
       showNotice(locale === 'ar' ? 'تم تحميل الوسائط ومزامنتها للغرفة.' : 'Media loaded and synced to the room.')
     } else {
       const searchSource = source === 'Direct media' || source === 'External site' ? 'YouTube' : source
-      window.open(`/api/search?source=${encodeURIComponent(searchSource)}&query=${encodeURIComponent(value)}`, '_blank', 'noopener,noreferrer')
-      showNotice(source === 'YouTube'
-        ? (locale === 'ar' ? 'فتح البحث الآمن. الصق رابطًا قابلًا للتضمين للمشاهدة في الغرفة.' : 'Safe video search opened. Paste an embeddable link to watch in the room.')
-        : (locale === 'ar' ? `يفتح ${source} موقعه الرسمي. تبقى المشاهدة المحمية لدى المنصة.` : `${source} opens on its official site. Protected playback stays with the provider.`))
+      if (searchSource === 'YouTube') {
+        openYouTubeSearch(value)
+      } else {
+        window.open(`/api/search?source=${encodeURIComponent(searchSource)}&query=${encodeURIComponent(value)}`, '_blank', 'noopener,noreferrer')
+        showNotice(locale === 'ar'
+          ? `يفتح ${searchSource} موقعه الرسمي. تبقى المشاهدة المحمية لدى المنصة.`
+          : `${searchSource} opens on its official site. Protected playback stays with the provider.`)
+      }
     }
     setQuery('')
   }
@@ -366,11 +433,11 @@ export function WatchRoom() {
   }
 
   const roomPanel = (
-    <aside className={`room-panel${panel ? ' room-panel-open' : ''}`} aria-label="Room activity">
-      <div className="panel-tabs" role="tablist" aria-label="Room panels">
+    <aside className={`room-panel${panel ? ' room-panel-open' : ''}`} aria-label={locale === 'ar' ? 'نشاط الغرفة' : 'Room activity'}>
+      <div className="panel-tabs" role="tablist" aria-label={locale === 'ar' ? 'لوحات الغرفة' : 'Room panels'}>
         <button type="button" role="tab" aria-selected={panel === 'people'} className={panel === 'people' ? 'panel-tab active' : 'panel-tab'} onClick={() => setPanel('people')}><UsersRound size={15} /> {locale === 'ar' ? 'الأشخاص' : 'People'} <span>{members.length}</span></button>
         <button type="button" role="tab" aria-selected={panel === 'chat'} className={panel === 'chat' ? 'panel-tab active' : 'panel-tab'} onClick={() => setPanel('chat')}><MessageCircle size={15} /> {locale === 'ar' ? 'الدردشة' : 'Chat'} <span>{messages.length}</span></button>
-        <button className="panel-close" type="button" aria-label="Close room panel" onClick={() => setPanel(null)}><X size={16} /></button>
+        <button className="panel-close" type="button" aria-label={locale === 'ar' ? 'إغلاق لوحة الغرفة' : 'Close room panel'} onClick={() => setPanel(null)}><X size={16} /></button>
       </div>
 
       {(panel === 'people' || panel === null) && <div className="people-panel">
@@ -386,42 +453,42 @@ export function WatchRoom() {
 
       {panel === 'chat' && activeRoomId && <RoomChatPanel roomId={activeRoomId} locale={locale} feed={roomFeed} onRefresh={() => { void refreshRoomFeed() }} onNotice={showNotice} />}
 
-      {panel === 'sources' && <div className="sources-panel"><div className="panel-summary"><div><strong>Choose a source</strong><span>Search across your favorite places.</span></div></div>{services.map((serviceName) => <button className={`source-choice${source === serviceName ? ' chosen' : ''}`} key={serviceName} type="button" onClick={() => { setSource(serviceName); setPanel(null); showNotice(serviceName === 'YouTube' ? 'Search YouTube, then paste an embeddable link to load it here.' : `${serviceName} opens on its official site. Sign in with your own account there; protected playback is not controlled by mkemo.`) }}><span className="source-mark">{serviceName.slice(0, 1)}</span><strong>{serviceName}</strong>{source === serviceName && <Check size={16} />}</button>)}<div className="source-legal-note"><LockKeyhole size={14} /><span><strong>Bring your own subscription</strong><small>Sign in on each service’s official site. mkemo never asks for or shares your password.</small></span></div><p className="preview-caption"><ShieldCheck size={13} /> Protected playback stays with its provider.</p></div>}
+      {panel === 'sources' && <div className="sources-panel"><div className="panel-summary"><div><strong>{locale === 'ar' ? 'اختر منصة' : 'Choose a source'}</strong><span>{locale === 'ar' ? 'ابحث في منصاتك المفضلة.' : 'Search across your favorite places.'}</span></div></div>{services.map((serviceName) => <button className={`source-choice${source === serviceName ? ' chosen' : ''}`} key={serviceName} type="button" onClick={() => { setSource(serviceName); setPanel(null); showNotice(serviceName === 'YouTube' ? (locale === 'ar' ? 'ابحث في YouTube ثم الصق رابطًا قابلًا للتضمين لفتحه هنا.' : 'Search YouTube, then paste an embeddable link to load it here.') : (locale === 'ar' ? `يفتح ${serviceName} موقعه الرسمي. سجّل الدخول بحسابك هناك؛ لا يتحكم mkemo في المشاهدة المحمية.` : `${serviceName} opens on its official site. Sign in with your own account there; protected playback is not controlled by mkemo.`)) }}><span className="source-mark">{serviceName.slice(0, 1)}</span><strong>{serviceName}</strong>{source === serviceName && <Check size={16} />}</button>)}<div className="source-legal-note"><LockKeyhole size={14} /><span><strong>{locale === 'ar' ? 'استخدم اشتراكك الخاص' : 'Bring your own subscription'}</strong><small>{locale === 'ar' ? 'سجّل الدخول في الموقع الرسمي لكل منصة. mkemo لا يطلب كلمة مرورك ولا يشاركها.' : 'Sign in on each service’s official site. mkemo never asks for or shares your password.'}</small></span></div><p className="preview-caption"><ShieldCheck size={13} /> {locale === 'ar' ? 'المشاهدة المحمية تبقى لدى المنصة الأصلية.' : 'Protected playback stays with its provider.'}</p></div>}
     </aside>
   )
 
   return <main className="watch-app">
     {view !== 'home' && <header className="app-header">
-      <button className="brand-mark" type="button" aria-label="mkemo home" onClick={leaveActiveRoom}><span className="brand-glyph"><Play size={14} fill="currentColor" /></span><span>mkemo</span></button>
-      <nav className="header-nav" aria-label="Main navigation"><button className={view === 'room' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => { if (activeRoomId) setView('room'); else setView('home') }}><UsersRound size={15} /> {locale === 'ar' ? 'مشاهدة' : 'Watch'}</button><button className={view === 'search' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => openMediaSearch()}><Search size={15} /> {locale === 'ar' ? 'بحث' : 'Search'}</button><button className={view === 'profile' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => setView('profile')}><Heart size={15} /> {locale === 'ar' ? 'مساحتي' : 'My space'}</button></nav>
-      <div className="header-actions"><button className="header-round" type="button" aria-label={locale === 'ar' ? 'فتح البحث' : 'Open search'} onClick={() => openMediaSearch()}><Search size={17} /></button><button className="header-round language-round" type="button" onClick={() => setLocale((current) => current === 'ar' ? 'en' : 'ar')} aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}><Languages size={16} /><span>{locale.toUpperCase()}</span></button><button className="account-trigger" type="button" onClick={() => setView('profile')}><span className="tiny-avatar avatar-mint">{profileImage ? <img src={profileImage} alt="" /> : 'M'}</span><span className="account-name">Morgan</span><ChevronDown size={14} /></button></div>
+      <button className="brand-mark" type="button" aria-label={locale === 'ar' ? 'الرئيسية mkemo' : 'mkemo home'} onClick={leaveActiveRoom}><span className="brand-glyph"><Play size={14} fill="currentColor" /></span><span>mkemo</span></button>
+      <nav className="header-nav" aria-label={locale === 'ar' ? 'التنقل الرئيسي' : 'Main navigation'}><button className={view === 'room' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => { if (activeRoomId) setView('room'); else setView('home') }}><UsersRound size={15} /> {locale === 'ar' ? 'مشاهدة' : 'Watch'}</button><button className={view === 'search' || view === 'youtube-browser' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => openMediaSearch()}><Search size={15} /> {locale === 'ar' ? 'بحث' : 'Search'}</button><button className={view === 'profile' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => setView('profile')}><Heart size={15} /> {locale === 'ar' ? 'مساحتي' : 'My space'}</button></nav>
+      <div className="header-actions"><button className="header-round" type="button" aria-label={locale === 'ar' ? 'فتح البحث' : 'Open search'} onClick={() => openMediaSearch()}><Search size={17} /></button><button className="header-round language-round" type="button" onClick={() => setLocale((current) => current === 'ar' ? 'en' : 'ar')} aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'} aria-pressed={locale === 'en'} title={locale === 'ar' ? 'English' : 'العربية'}><Languages size={16} /><span>{locale.toUpperCase()}</span></button><button className="account-trigger" type="button" onClick={() => setView('profile')} aria-label={locale === 'ar' ? 'افتح الملف الشخصي' : 'Open profile'}><span className="tiny-avatar avatar-mint">{profileImage ? <img src={profileImage} alt="" /> : 'M'}</span><span className="account-name">Morgan</span><ChevronDown size={14} /></button></div>
     </header>}
 
-    {view === 'home' ? <RoomDiscovery locale={locale} onToggleLocale={() => setLocale((current) => current === 'ar' ? 'en' : 'ar')} onOpenProfile={() => setView('profile')} onOpenSearch={(searchQuery) => openMediaSearch(searchQuery)} onCreateRoom={createRoom} onJoinRoom={enterRoom} onAcceptInvite={() => { if (pendingInvite) void enterRoom(pendingInvite.roomId, pendingInvite.inviteToken) }} hasInvite={Boolean(pendingInvite)} /> : view === 'search' ? <MediaSearchHub locale={locale} initialQuery={mediaSearchQuery} onBack={() => setView(activeRoomId ? 'room' : 'home')} onOpenHome={() => setView('home')} onOpenRoom={() => setView(activeRoomId ? 'room' : 'home')} onOpenProfile={() => setView('profile')} onSearch={submitMediaSearch} onSelectService={openPlatformSearch} /> : view === 'room' ? <>
+    {view === 'home' ? <RoomDiscovery locale={locale} onToggleLocale={() => setLocale((current) => current === 'ar' ? 'en' : 'ar')} onOpenProfile={() => setView('profile')} onOpenSearch={(searchQuery) => openMediaSearch(searchQuery)} onCreateRoom={(roomSource, isPublic) => createRoom(roomSource, isPublic).then(() => undefined)} onJoinRoom={enterRoom} onAcceptInvite={() => { if (pendingInvite) void enterRoom(pendingInvite.roomId, pendingInvite.inviteToken) }} hasInvite={Boolean(pendingInvite)} /> : view === 'search' ? <MediaSearchHub locale={locale} initialQuery={mediaSearchQuery} onBack={() => setView(activeRoomId ? 'room' : 'home')} onOpenHome={() => setView('home')} onOpenRoom={() => setView(activeRoomId ? 'room' : 'home')} onOpenProfile={() => setView('profile')} onSearch={submitMediaSearch} onSelectService={openPlatformSearch} /> : view === 'youtube-browser' ? <YouTubeSearchBrowser locale={locale} initialQuery={mediaSearchQuery} onBack={() => setView('search')} onPlay={(video) => void selectYouTubeResult(video)} /> : view === 'room' ? <>
       <div className="room-content">
-        <section className="room-titlebar"><div><div className="room-kicker"><span className="live-pulse" /> {roomPublic ? (locale === 'ar' ? 'غرفة عامة' : 'PUBLIC ROOM') : (locale === 'ar' ? 'غرفة خاصة' : 'PRIVATE ROOM')} <span className="kicker-separator">/</span> {locale === 'ar' ? 'مشاهدة الليلة' : 'TONIGHT’S WATCH'}</div><h1>{roomFeed?.room.title ?? (locale === 'ar' ? 'غرفة مشاهدة' : 'Watch together')}</h1></div><div className="room-title-actions"><button className="privacy-toggle" type="button" onClick={() => void toggleRoomVisibility()} aria-label={locale === 'ar' ? 'تغيير ظهور الغرفة' : 'Change room visibility'}>{roomPublic ? <Globe2 size={14} /> : <LockKeyhole size={14} />}{roomPublic ? (locale === 'ar' ? 'عام' : 'Public') : (locale === 'ar' ? 'خاص' : 'Private')}<ChevronDown size={13} /></button><button className="invite-button" type="button" onClick={shareRoom}>{copied ? <Check size={15} /> : <Share2 size={15} />}<span>{copied ? (locale === 'ar' ? 'تم النسخ' : 'Copied') : (locale === 'ar' ? 'دعوة' : 'Invite')}</span></button></div></section>
+        <section className="room-titlebar"><div><div className="room-kicker"><span className="live-pulse" /> {roomPublic ? (locale === 'ar' ? 'غرفة عامة' : 'PUBLIC ROOM') : (locale === 'ar' ? 'غرفة خاصة' : 'PRIVATE ROOM')} <span className="kicker-separator">/</span> {locale === 'ar' ? 'مشاهدة الليلة' : 'TONIGHT’S WATCH'}</div><h1>{roomTitle}</h1></div><div className="room-title-actions"><button className="privacy-toggle" type="button" onClick={() => void toggleRoomVisibility()} aria-label={locale === 'ar' ? 'تغيير ظهور الغرفة' : 'Change room visibility'}>{roomPublic ? <Globe2 size={14} /> : <LockKeyhole size={14} />}{roomPublic ? (locale === 'ar' ? 'عام' : 'Public') : (locale === 'ar' ? 'خاص' : 'Private')}<ChevronDown size={13} /></button><button className="invite-button" type="button" onClick={shareRoom}>{copied ? <Check size={15} /> : <Share2 size={15} />}<span>{copied ? (locale === 'ar' ? 'تم النسخ' : 'Copied') : (locale === 'ar' ? 'دعوة' : 'Invite')}</span></button></div></section>
 
-        <form className="room-search" onSubmit={openSearch}><Search size={17} /><input id="room-search" aria-label="Search or paste a video link" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a video or paste a link..." /><span className="duration-hint">24h</span><button type="submit" aria-label="Search videos"><Search size={16} /></button></form>
-        <div className="search-footnote"><span>Search {source}</span><button type="button" onClick={() => setPanel('sources')}><Globe2 size={13} /> Browse sources <ChevronDown size={12} /></button><span className="supported-note"><ShieldCheck size={12} /> {locale === 'ar' ? '4K / 240fps عند الدعم · 24 ساعة' : '4K / 240fps when available · 24h'}</span></div>
+        <form className="room-search" onSubmit={openSearch}><Search size={17} /><input id="room-search" aria-label={locale === 'ar' ? 'ابحث أو الصق رابط فيديو' : 'Search or paste a video link'} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={locale === 'ar' ? 'ابحث عن فيديو أو الصق رابطه...' : 'Search a video or paste a link...'} /><span className="duration-hint">24h</span><button type="submit" aria-label={locale === 'ar' ? 'ابحث عن فيديوهات' : 'Search videos'}><Search size={16} /></button></form>
+        <div className="search-footnote"><span>{locale === 'ar' ? `بحث ${source}` : `Search ${source}`}</span><button type="button" onClick={() => setPanel('sources')}><Globe2 size={13} /> {locale === 'ar' ? 'تصفح المنصات' : 'Browse sources'} <ChevronDown size={12} /></button><span className="supported-note"><ShieldCheck size={12} /> {locale === 'ar' ? '4K / 240fps عند الدعم · 24 ساعة' : '4K / 240fps when available · 24h'}</span></div>
 
         <div className="room-grid">
-          <section className="watch-column" aria-label="Watch together">
+          <section className="watch-column" aria-label={locale === 'ar' ? 'مشاهدة معًا' : 'Watch together'}>
             <MediaStage isPlaying={playing} isMuted={muted} controlsEnabled={isRoomHost} currentTime={time} duration={duration} activeSource={source} mediaUrl={mediaUrl} locale={locale} onTogglePlay={toggleSharedPlayback} onToggleMute={() => setMuted((value) => !value)} onPlaybackStateChange={handlePlayerPlaybackStateChange} onSeek={setTime} onCommitSeek={commitSharedSeek} onProgress={seekSharedPlayback} onDurationChange={setDuration} onNotice={showNotice} />
-            <p className="rights-note"><ShieldCheck size={13} /> Use your own subscription. Protected movies stay in the provider&apos;s player; mkemo never shares credentials or bypasses DRM.</p>
-            <div className="media-caption"><div className="media-caption-art"><img src="/cinema-still.png" alt="" /></div><div className="media-caption-copy"><span>NOW IN THE ROOM <i /> ORIGINAL PREVIEW</span><strong>{roomFeed?.room.title ?? (locale === 'ar' ? 'حمّل فيديو لعرض اسمه هنا' : 'Load a video to see its title here')}</strong><small>{source} <span>·</span> Long-form friendly</small></div><button className={`save-button${saved ? ' is-saved' : ''}`} type="button" aria-label={saved ? 'Remove from saved' : 'Save this video'} onClick={() => { setSaved((value) => !value); showNotice(saved ? 'Removed from your saved list.' : 'Saved to your mkemo space.') }}><Heart size={17} fill={saved ? 'currentColor' : 'none'} /><span>{saved ? 'Saved' : 'Save'}</span></button></div>
+            <p className="rights-note"><ShieldCheck size={13} /> {locale === 'ar' ? 'استخدم اشتراكك الخاص. تبقى الأفلام المحمية في مشغل المنصة؛ لا يشارك mkemo بيانات الدخول ولا يتجاوز DRM.' : "Use your own subscription. Protected movies stay in the provider's player; mkemo never shares credentials or bypasses DRM."}</p>
+            <div className="media-caption"><div className="media-caption-art"><img src="/cinema-still.png" alt="" /></div><div className="media-caption-copy"><span>{locale === 'ar' ? 'يُعرض في الغرفة' : 'NOW IN THE ROOM'} <i /> {locale === 'ar' ? 'معاينة أصلية' : 'ORIGINAL PREVIEW'}</span><strong>{mediaUrl ? (mediaTitle?.url === mediaUrl ? mediaTitle.title : roomTitle) : (locale === 'ar' ? 'حمّل فيديو لعرض اسمه هنا' : 'Load a video to see its title here')}</strong><small>{source} <span>·</span> {locale === 'ar' ? 'مناسب للمشاهدة الطويلة' : 'Long-form friendly'}</small></div><button className={`save-button${saved ? ' is-saved' : ''}`} type="button" aria-label={saved ? (locale === 'ar' ? 'إزالة من المحفوظات' : 'Remove from saved') : (locale === 'ar' ? 'حفظ هذا الفيديو' : 'Save this video')} onClick={() => { setSaved((value) => !value); showNotice(saved ? (locale === 'ar' ? 'أُزيل من محفوظاتك.' : 'Removed from your saved list.') : (locale === 'ar' ? 'حُفظ في مساحتك على mkemo.' : 'Saved to your mkemo space.')) }}><Heart size={17} fill={saved ? 'currentColor' : 'none'} /><span>{saved ? (locale === 'ar' ? 'محفوظ' : 'Saved') : (locale === 'ar' ? 'حفظ' : 'Save')}</span></button></div>
             <div className="member-peek"><div className="peek-avatars">{members.slice(0, 4).map((member, index) => <span key={member.guestId} className={`peek-avatar avatar-${['lilac', 'blue', 'peach', 'mint'][index % 4]}`} title={member.displayName}>{member.displayName.slice(0, 1)}</span>)}</div><button type="button" onClick={() => setPanel('people')}><strong>{new Intl.NumberFormat(locale).format(members.length)} {locale === 'ar' ? 'أشخاص' : 'people'}</strong><span>{locale === 'ar' ? 'يشاهدون معك الآن' : 'watching with you now'}</span></button><button type="button" className="peek-more" onClick={() => setPanel('people')} aria-label={locale === 'ar' ? 'عرض الجميع' : 'Show everyone'}><MoreHorizontal size={18} /></button></div>
-            <div className="control-row" aria-label={locale === 'ar' ? 'عناصر التحكم بالغرفة' : 'Room controls'}><button className="control-item" type="button" onClick={() => showNotice(locale === 'ar' ? 'المحادثة الصوتية الجماعية غير مفعلة. الميكروفون مغلق.' : 'Group voice is not enabled. Your microphone stays off.')} aria-label={locale === 'ar' ? 'الميكروفون مغلق' : 'Microphone is off'}><MicOff size={19} /><span>{locale === 'ar' ? 'الميكروفون' : 'Mic off'}</span></button><button className={panel === 'chat' ? 'control-item control-active' : 'control-item'} type="button" onClick={() => togglePanel('chat')}><MessageCircle size={19} /><span>{locale === 'ar' ? 'الدردشة' : 'Chat'}</span><i className="control-count">{messages.length}</i></button><button className="control-item" type="button" onClick={() => setPanel('chat')}><ImagePlus size={19} /><span>GIF</span></button><button className={panel === 'people' ? 'control-item control-active' : 'control-item'} type="button" onClick={() => togglePanel('people')}><UsersRound size={19} /><span>{locale === 'ar' ? 'الأشخاص' : 'People'}</span></button><button className="control-item" type="button" onClick={shareRoom}><Share2 size={19} /><span>{locale === 'ar' ? 'مشاركة' : 'Share'}</span></button><button className={panel === 'sources' ? 'control-item control-active' : 'control-item'} type="button" onClick={() => togglePanel('sources')}><Globe2 size={19} /><span>{locale === 'ar' ? 'المنصات' : 'Browse'}</span></button></div>
-            <div className="next-up"><div className="next-up-title"><div><span>THE NIGHT CONTINUES</span><strong>On the watchlist</strong></div><button type="button" onClick={() => showNotice('Paste a video link above to add it to the room queue.')}><Plus size={15} /> Add</button></div><div className="queue-tile"><img src="/cinema-still.png" alt="Futuristic city at sunset" /><div><strong>Midnight in the city</strong><span>Community pick <i>·</i> 24:00:00</span></div><button type="button" aria-label="Play next video" onClick={() => showNotice('Paste a playable video link to start watching.') }><Play size={15} fill="currentColor" /></button></div></div>
+            <div className="control-row" aria-label={locale === 'ar' ? 'عناصر التحكم بالغرفة' : 'Room controls'}><button className="control-item" type="button" onClick={() => showNotice(locale === 'ar' ? 'المحادثة الصوتية الجماعية غير مفعلة. الميكروفون مغلق.' : 'Group voice is not enabled. Your microphone stays off.')} aria-label={locale === 'ar' ? 'الميكروفون مغلق' : 'Microphone is off'}><MicOff size={19} /><span>{locale === 'ar' ? 'الميكروفون مغلق' : 'Mic off'}</span></button><button className={panel === 'chat' ? 'control-item control-active' : 'control-item'} type="button" onClick={() => togglePanel('chat')} aria-label={locale === 'ar' ? 'فتح دردشة الغرفة' : 'Open room chat'}><MessageCircle size={19} /><span>{locale === 'ar' ? 'الدردشة' : 'Chat'}</span><i className="control-count">{messages.length}</i></button><button className="control-item" type="button" onClick={() => setPanel('chat')} aria-label={locale === 'ar' ? 'إرفاق GIF' : 'Attach a GIF'}><ImagePlus size={19} /><span>GIF</span></button><button className={panel === 'people' ? 'control-item control-active' : 'control-item'} type="button" onClick={() => togglePanel('people')}><UsersRound size={19} /><span>{locale === 'ar' ? 'الأشخاص' : 'People'}</span></button><button className="control-item" type="button" onClick={shareRoom}><Share2 size={19} /><span>{locale === 'ar' ? 'مشاركة' : 'Share'}</span></button><button className={panel === 'sources' ? 'control-item control-active' : 'control-item'} type="button" onClick={() => togglePanel('sources')}><Globe2 size={19} /><span>{locale === 'ar' ? 'المنصات' : 'Browse'}</span></button></div>
+            <div className="next-up"><div className="next-up-title"><div><span>{locale === 'ar' ? 'الليلة مستمرة' : 'THE NIGHT CONTINUES'}</span><strong>{locale === 'ar' ? 'قائمة المشاهدة' : 'On the watchlist'}</strong></div><button type="button" onClick={() => showNotice(locale === 'ar' ? 'الصق رابط فيديو بالأعلى لإضافته إلى قائمة الغرفة.' : 'Paste a video link above to add it to the room queue.')}><Plus size={15} /> {locale === 'ar' ? 'أضف' : 'Add'}</button></div><div className="queue-tile"><img src="/cinema-still.png" alt={locale === 'ar' ? 'مدينة مستقبلية عند الغروب' : 'Futuristic city at sunset'} /><div><strong>{locale === 'ar' ? 'منتصف الليل في المدينة' : 'Midnight in the city'}</strong><span>{locale === 'ar' ? 'اختيار المجتمع' : 'Community pick'} <i>·</i> 24:00:00</span></div><button type="button" aria-label={locale === 'ar' ? 'تشغيل الفيديو التالي' : 'Play next video'} onClick={() => showNotice(locale === 'ar' ? 'الصق رابط فيديو قابلًا للتشغيل لبدء المشاهدة.' : 'Paste a playable video link to start watching.')}><Play size={15} fill="currentColor" /></button></div></div>
           </section>
           {roomPanel}
         </div>
       </div>
       <div className="mobile-panel-scrim" aria-hidden="true" onClick={() => setPanel(null)} />
-      <footer className="room-footer"><span><span className="footer-live" /> mkemo room <b>{activeRoomId?.slice(0, 8).toUpperCase()}</b></span><span className="footer-copyright">{locale === 'ar' ? 'مساحة للحظات اللي تحبونها.' : 'A room for the things you love.'}</span><button type="button" onClick={shareRoom}><Share2 size={14} /> {locale === 'ar' ? 'مشاركة الغرفة' : 'Share room'}</button></footer>
+      <footer className="room-footer"><span><span className="footer-live" /> {locale === 'ar' ? 'غرفة mkemo' : 'mkemo room'} <b>{activeRoomId?.slice(0, 8).toUpperCase()}</b></span><span className="footer-copyright">{locale === 'ar' ? 'مساحة للحظات اللي تحبونها.' : 'A room for the things you love.'}</span><button type="button" onClick={shareRoom}><Share2 size={14} /> {locale === 'ar' ? 'مشاركة الغرفة' : 'Share room'}</button></footer>
     </> : <ProfilePanel locale={locale} profileImage={profileImage} posts={posts} onBack={() => setView(activeRoomId ? 'room' : 'home')} onNotice={showNotice} onPhotoChange={selectPhoto} />}
 
 
-    {notice && <div className="notice-toast" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss notification"><X size={15} /></button></div>}
+    {notice && <div className="notice-toast" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label={locale === 'ar' ? 'إغلاق الإشعار' : 'Dismiss notification'}><X size={15} /></button></div>}
   </main>
 }
 

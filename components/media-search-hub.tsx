@@ -65,6 +65,7 @@ export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpe
   const isArabic = locale === 'ar'
   const selectedServiceInfo = [...leftServices, ...rightServices].find((service) => service.name === selectedService)
   const SelectedServiceIcon = selectedServiceInfo?.icon
+  const isYouTubeSearch = selectedServiceInfo?.name === 'YouTube'
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -103,7 +104,7 @@ export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpe
   }
 
   return (
-    <section className="media-hub" dir={isArabic ? 'rtl' : 'ltr'} aria-label={isArabic ? 'البحث والمنصات' : 'Search and media platforms'}>
+    <section className={`media-hub${isYouTubeSearch ? ' media-hub-youtube' : ''}`} dir={isArabic ? 'rtl' : 'ltr'} aria-label={isArabic ? 'البحث والمنصات' : 'Search and media platforms'}>
       <div className="media-hub-glow media-hub-glow-one" aria-hidden="true" />
       <div className="media-hub-glow media-hub-glow-two" aria-hidden="true" />
       <div className="media-hub-content">
@@ -122,7 +123,7 @@ export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpe
               <div className="media-hub-provider-copy">
                 <span>{isArabic ? 'بحث داخل التطبيق' : 'SEARCH INSIDE THE APP'}</span>
                 <h2>{selectedServiceInfo.name}</h2>
-                <p>{isArabic ? `ابحث عن المحتوى الذي تريد مشاهدته على ${selectedServiceInfo.name}.` : `Find something to watch on ${selectedServiceInfo.name}.`}</p>
+                <p>{isYouTubeSearch ? (isArabic ? 'تصفح نتائج يوتيوب وشغّل الفيديو هنا داخل mkemo.' : 'Browse YouTube results and play videos here in mkemo.') : (isArabic ? `ابحث عن المحتوى الذي تريد مشاهدته على ${selectedServiceInfo.name}.` : `Find something to watch on ${selectedServiceInfo.name}.`)}</p>
               </div>
             </div>
             <form className="media-hub-search media-hub-search-selected" role="search" onSubmit={submitSearch}>
@@ -140,8 +141,8 @@ export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpe
               <button type="submit" aria-label={isArabic ? 'بحث' : 'Search'}><Search size={17} /></button>
             </form>
             <div className="media-hub-provider-meta">
-              <span><Globe2 size={15} />{isArabic ? 'بحث من المصدر الرسمي' : 'Official source search'}</span>
-              <span><ExternalLink size={14} />{isArabic ? 'تفتح النتائج على المنصة' : 'Results open on the service'}</span>
+              <span><Globe2 size={15} />{isYouTubeSearch ? (isArabic ? 'نتائج يوتيوب الفعلية' : 'Live YouTube results') : (isArabic ? 'بحث من المصدر الرسمي' : 'Official source search')}</span>
+              <span>{isYouTubeSearch ? <Search size={14} /> : <ExternalLink size={14} />}{isYouTubeSearch ? (isArabic ? 'تظهر النتائج هنا في mkemo' : 'Results appear here in mkemo') : (isArabic ? 'تفتح النتائج على المنصة' : 'Results open on the service')}</span>
             </div>
           </div>
         ) : (
@@ -153,7 +154,7 @@ export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpe
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder={isArabic ? 'بحث' : 'Search movies, shows, and more'}
+                placeholder={isArabic ? 'ابحث في يوتيوب أو اختر منصة' : 'Search YouTube or choose another app'}
                 aria-label={isArabic ? 'بحث عن محتوى' : 'Search for media'}
                 autoComplete="off"
               />
@@ -161,7 +162,7 @@ export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpe
             </form>
 
             <div className="media-hub-section-heading">
-              <div><h2>{isArabic ? 'منصاتك واختصاراتك' : 'Your platforms & shortcuts'}</h2><p>{isArabic ? 'اختر منصة لفتح البحث الخاص بها' : 'Choose an app to open its own search'}</p></div>
+              <div><h2>{isArabic ? 'منصاتك واختصاراتك' : 'Your platforms & shortcuts'}</h2><p>{isArabic ? 'ابحث في يوتيوب هنا أو اختر تطبيقًا آخر' : 'Search YouTube here or choose another app'}</p></div>
               <span>{isArabic ? '١٥ وجهة' : '15 DESTINATIONS'}</span>
             </div>
 
@@ -169,7 +170,7 @@ export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpe
               {[...leftServices, ...rightServices].map(renderService)}
             </div>
 
-            <p className="media-hub-note">{isArabic ? 'تُفتح النتائج من المصدر الرسمي. استخدم حسابك واشتراكك الخاص.' : 'Search results open on the official service. Use your own account and subscription.'}</p>
+            <p className="media-hub-note">{isArabic ? 'تظهر نتائج يوتيوب هنا، وتفتح بقية المنصات من مصادرها الرسمية. استخدم حسابك واشتراكك الخاص.' : 'YouTube results appear here; other apps open their official sites. Use your own account and subscription.'}</p>
           </>
         )}
       </div>
