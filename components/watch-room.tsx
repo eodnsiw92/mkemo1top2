@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   Check,
@@ -34,11 +34,10 @@ import { ProfilePanel } from '@/components/profile-panel'
 import { CountryName } from '@/components/country-name'
 import { splitCountryFlag } from '@/lib/country'
 import { RoomDiscovery } from '@/components/room-discovery'
-import { MediaSearchHub } from '@/components/media-search-hub'
 import { YouTubeSearchBrowser, type YouTubeSearchResult } from '@/components/youtube-search-browser'
 import { useRoomFeed } from '@/lib/room-feed'
 import { containsProhibitedSearch } from '@/lib/content-safety'
-import { getPlayableSource } from '@/lib/media-url'
+import { getPlayableSource, getPlayableSourceFromInput, isMediaUrlInput } from '@/lib/media-url'
 
 type Panel = 'people' | 'chat' | 'sources' | null
 
@@ -46,7 +45,6 @@ type Panel = 'people' | 'chat' | 'sources' | null
 const services = ['YouTube', 'Netflix', 'Prime Video', 'Disney+', 'Twitch']
 
 export function WatchRoom() {
-  const [query, setQuery] = useState('')
   const [source, setSource] = useState('YouTube')
   const [mediaUrl, setMediaUrl] = useState('')
   const [playing, setPlaying] = useState(false)
@@ -54,7 +52,7 @@ export function WatchRoom() {
   const [time, setTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [panel, setPanel] = useState<Panel>(null)
-  const [view, setView] = useState<'home' | 'room' | 'profile' | 'search' | 'youtube-browser'>('home')
+  const [view, setView] = useState<'home' | 'room' | 'profile' | 'youtube-browser'>('youtube-browser')
   const [locale, setLocale] = useState<'ar' | 'en'>('ar')
   const [mediaSearchQuery, setMediaSearchQuery] = useState('')
   const [mediaTitle, setMediaTitle] = useState<{ url: string; title: string } | null>(null)
@@ -69,6 +67,7 @@ export function WatchRoom() {
   const [saved, setSaved] = useState(true)
   const appliedPlaybackRef = useRef('')
   const playbackUpdateTimeRef = useRef(0)
+  const initialInviteHandledRef = useRef(false)
   const { data: roomFeed, mutate: refreshRoomFeed } = useRoomFeed(activeRoomId)
   const messages = roomFeed?.messages ?? []
   const members = roomFeed?.members ?? []
@@ -82,7 +81,13 @@ export function WatchRoom() {
     document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr'
     const url = new URL(window.location.href)
     const roomId = url.searchParams.get('room')
-    if (roomId) setPendingInvite({ roomId, inviteToken: url.searchParams.get('invite') ?? '' })
+    if (roomId) {
+      setPendingInvite({ roomId, inviteToken: url.searchParams.get('invite') ?? '' })
+      if (!initialInviteHandledRef.current) {
+        initialInviteHandledRef.current = true
+        setView('home')
+      }
+    }
     const searchState = url.searchParams.get('search')
     if (searchState === 'blocked') setNotice(locale === 'ar' ? 'البحث عن المحتوى الإباحي غير مسموح.' : 'Pornographic searches are not allowed.')
     if (searchState === 'invalid') setNotice(locale === 'ar' ? 'اكتب عنوان فيديو صحيحًا.' : 'Enter a valid video title.')
@@ -182,7 +187,7 @@ export function WatchRoom() {
     setActiveRoomId(null)
     setActiveInviteToken('')
     setPanel(null)
-    setView('home')
+    setView('youtube-browser')
   }
 
   async function toggleRoomVisibility() {
@@ -221,6 +226,49 @@ export function WatchRoom() {
     await refreshRoomFeed()
   }
 
+  async function playMediaLink(value: string) {
+    const playable = getPlayableSourceFromInput(value)
+    if (!playable || containsProhibitedSearch(playable.url)) {
+      showNotice(locale === 'ar' ? 'استخدم رابط HTTPS آمنًا لفيديو أو منصة مدعومة.' : 'Use a secure HTTPS link to a supported video or player.')
+      return
+    }
+    if (activeRoomId && !isRoomHost) {
+      showNotice(locale === 'ar' ? 'مضيف الغرفة فقط يستطيع اختيار فيديو جديد.' : 'Only the room host can choose a new video.')
+      return
+    }
+
+    const isCreatingRoom = !activeRoomId
+    try {
+      const roomId = activeRoomId ?? await createRoom(playable.label, false)
+      if (!roomId) return
+
+      setMediaUrl(playable.url)
+      setMediaTitle(null)
+      setTime(0)
+      setDuration(0)
+      setPlaying(true)
+      setSource(playable.label)
+      setView('room')
+
+      const response = await fetch(`/api/rooms/${encodeURIComponent(roomId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playback: { mediaUrl: playable.url, position: 0, isPlaying: true } }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setPlaying(false)
+        showNotice(result.error || 'Shared playback could not be updated.')
+        return
+      }
+      if (!isCreatingRoom) await refreshRoomFeed()
+      showNotice(locale === 'ar' ? 'تم تشغيل الرابط ومزامنته مع الغرفة.' : 'The link is playing and synced to the room.')
+    } catch {
+      setPlaying(false)
+      showNotice(locale === 'ar' ? 'تعذّر تشغيل الرابط في الغرفة. حاول مرة أخرى.' : 'The link could not be loaded into the room. Try again.')
+    }
+  }
+
   function toggleSharedPlayback() {
     if (!isRoomHost) {
       showNotice(locale === 'ar' ? 'مضيف الغرفة فقط يتحكم بالتشغيل.' : 'Only the room host can control playback.')
@@ -257,37 +305,23 @@ export function WatchRoom() {
     void updateSharedPlayback(roomFeed.room.mediaUrl, nextTime, playing)
   }
 
-  function openMediaSearch(initialQuery = '') {
-    setMediaSearchQuery(initialQuery)
-    setView('search')
-  }
-
   function openYouTubeSearch(searchQuery = '') {
     const value = searchQuery.trim()
     if (value && containsProhibitedSearch(value)) {
       showNotice(locale === 'ar' ? 'البحث عن هذا المحتوى غير مسموح.' : 'This search is not allowed.')
       return
     }
+    if (isMediaUrlInput(value)) {
+      const playable = getPlayableSourceFromInput(value)
+      if (!playable) {
+        showNotice(locale === 'ar' ? 'الرابط غير مدعوم. استخدم HTTPS ورابط فيديو أو منصة مدعومة.' : 'That link is not supported. Use HTTPS and a direct video or supported player URL.')
+        return
+      }
+      void playMediaLink(playable.url)
+      return
+    }
     setMediaSearchQuery(value)
     setView('youtube-browser')
-  }
-
-  function openPlatformSearch(service: string, searchQuery: string) {
-    if (service === 'Likes') {
-      setView('profile')
-      return
-    }
-    if (service === 'YouTube') {
-      openYouTubeSearch(searchQuery)
-      return
-    }
-    const params = new URLSearchParams({ source: service })
-    if (searchQuery) params.set('query', searchQuery)
-    window.open(`/api/search?${params.toString()}`, '_blank', 'noopener,noreferrer')
-  }
-
-  function submitMediaSearch(searchQuery: string) {
-    openYouTubeSearch(searchQuery)
   }
 
   async function selectYouTubeResult(video: YouTubeSearchResult) {
@@ -312,7 +346,6 @@ export function WatchRoom() {
       setDuration(0)
       setPlaying(true)
       setSource('YouTube')
-      setQuery('')
       setView('room')
 
       const response = await fetch(`/api/rooms/${encodeURIComponent(roomId)}`, {
@@ -332,45 +365,6 @@ export function WatchRoom() {
       setPlaying(false)
       showNotice(locale === 'ar' ? 'تعذّر تحميل الفيديو في الغرفة. حاول مرة أخرى.' : 'The video could not be loaded into the room. Try again.')
     }
-  }
-
-  function openSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const value = query.trim()
-    if (!value) return
-    if (containsProhibitedSearch(value)) {
-      showNotice(locale === 'ar' ? 'البحث أو الروابط الإباحية غير مسموحة.' : 'Pornographic searches and links are not allowed.')
-      setQuery('')
-      return
-    }
-
-    const isAddress = /^https?:\/\//i.test(value) || /^([\w-]+\.)+[a-z]{2,}(\/.*)?$/i.test(value)
-    if (isAddress) {
-      const candidate = /^https?:\/\//i.test(value) ? value : `https://${value}`
-      const playable = getPlayableSource(candidate)
-      if (!playable) {
-        showNotice(locale === 'ar' ? 'استخدم رابط HTTPS صالحًا لمنصة أو ملف وسائط عام.' : 'Use a valid HTTPS link to a public media file or platform.')
-        return
-      }
-      setMediaUrl(playable.url)
-      setTime(0)
-      setDuration(0)
-      setPlaying(false)
-      setSource(playable.label)
-      void updateSharedPlayback(playable.url, 0, false)
-      showNotice(locale === 'ar' ? 'تم تحميل الوسائط ومزامنتها للغرفة.' : 'Media loaded and synced to the room.')
-    } else {
-      const searchSource = source === 'Direct media' || source === 'External site' ? 'YouTube' : source
-      if (searchSource === 'YouTube') {
-        openYouTubeSearch(value)
-      } else {
-        window.open(`/api/search?source=${encodeURIComponent(searchSource)}&query=${encodeURIComponent(value)}`, '_blank', 'noopener,noreferrer')
-        showNotice(locale === 'ar'
-          ? `يفتح ${searchSource} موقعه الرسمي. تبقى المشاهدة المحمية لدى المنصة.`
-          : `${searchSource} opens on its official site. Protected playback stays with the provider.`)
-      }
-    }
-    setQuery('')
   }
 
   async function shareRoom() {
@@ -460,16 +454,13 @@ export function WatchRoom() {
   return <main className="watch-app">
     {view !== 'home' && <header className="app-header">
       <button className="brand-mark" type="button" aria-label={locale === 'ar' ? 'الرئيسية mkemo' : 'mkemo home'} onClick={leaveActiveRoom}><span className="brand-glyph"><Play size={14} fill="currentColor" /></span><span>mkemo</span></button>
-      <nav className="header-nav" aria-label={locale === 'ar' ? 'التنقل الرئيسي' : 'Main navigation'}><button className={view === 'room' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => { if (activeRoomId) setView('room'); else setView('home') }}><UsersRound size={15} /> {locale === 'ar' ? 'مشاهدة' : 'Watch'}</button><button className={view === 'search' || view === 'youtube-browser' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => openMediaSearch()}><Search size={15} /> {locale === 'ar' ? 'بحث' : 'Search'}</button><button className={view === 'profile' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => setView('profile')}><Heart size={15} /> {locale === 'ar' ? 'مساحتي' : 'My space'}</button></nav>
-      <div className="header-actions"><button className="header-round" type="button" aria-label={locale === 'ar' ? 'فتح البحث' : 'Open search'} onClick={() => openMediaSearch()}><Search size={17} /></button><button className="header-round language-round" type="button" onClick={() => setLocale((current) => current === 'ar' ? 'en' : 'ar')} aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'} aria-pressed={locale === 'en'} title={locale === 'ar' ? 'English' : 'العربية'}><Languages size={16} /><span>{locale.toUpperCase()}</span></button><button className="account-trigger" type="button" onClick={() => setView('profile')} aria-label={locale === 'ar' ? 'افتح الملف الشخصي' : 'Open profile'}><span className="tiny-avatar avatar-mint">{profileImage ? <img src={profileImage} alt="" /> : 'M'}</span><span className="account-name">Morgan</span><ChevronDown size={14} /></button></div>
+      <nav className="header-nav" aria-label={locale === 'ar' ? 'التنقل الرئيسي' : 'Main navigation'}><button className={view === 'room' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => { if (activeRoomId) setView('room'); else setView('home') }}><UsersRound size={15} /> {locale === 'ar' ? 'مشاهدة' : 'Watch'}</button><button className={view === 'youtube-browser' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => openYouTubeSearch()}><Search size={15} /> {locale === 'ar' ? 'بحث' : 'Search'}</button><button className={view === 'profile' ? 'nav-item nav-current' : 'nav-item'} type="button" onClick={() => setView('profile')}><Heart size={15} /> {locale === 'ar' ? 'مساحتي' : 'My space'}</button></nav>
+      <div className="header-actions"><button className="header-round" type="button" aria-label={locale === 'ar' ? 'فتح البحث' : 'Open search'} onClick={() => openYouTubeSearch()}><Search size={17} /></button><button className="header-round language-round" type="button" onClick={() => setLocale((current) => current === 'ar' ? 'en' : 'ar')} aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'} aria-pressed={locale === 'en'} title={locale === 'ar' ? 'English' : 'العربية'}><Languages size={16} /><span>{locale.toUpperCase()}</span></button><button className="account-trigger" type="button" onClick={() => setView('profile')} aria-label={locale === 'ar' ? 'افتح الملف الشخصي' : 'Open profile'}><span className="tiny-avatar avatar-mint">{profileImage ? <img src={profileImage} alt="" /> : 'M'}</span><span className="account-name">Morgan</span><ChevronDown size={14} /></button></div>
     </header>}
 
-    {view === 'home' ? <RoomDiscovery locale={locale} onToggleLocale={() => setLocale((current) => current === 'ar' ? 'en' : 'ar')} onOpenProfile={() => setView('profile')} onOpenSearch={(searchQuery) => openMediaSearch(searchQuery)} onCreateRoom={(roomSource, isPublic) => createRoom(roomSource, isPublic).then(() => undefined)} onJoinRoom={enterRoom} onAcceptInvite={() => { if (pendingInvite) void enterRoom(pendingInvite.roomId, pendingInvite.inviteToken) }} hasInvite={Boolean(pendingInvite)} /> : view === 'search' ? <MediaSearchHub locale={locale} initialQuery={mediaSearchQuery} onBack={() => setView(activeRoomId ? 'room' : 'home')} onOpenHome={() => setView('home')} onOpenRoom={() => setView(activeRoomId ? 'room' : 'home')} onOpenProfile={() => setView('profile')} onSearch={submitMediaSearch} onSelectService={openPlatformSearch} /> : view === 'youtube-browser' ? <YouTubeSearchBrowser locale={locale} initialQuery={mediaSearchQuery} onBack={() => setView('search')} onPlay={(video) => void selectYouTubeResult(video)} /> : view === 'room' ? <>
+    {view === 'home' ? <RoomDiscovery locale={locale} onToggleLocale={() => setLocale((current) => current === 'ar' ? 'en' : 'ar')} onOpenProfile={() => setView('profile')} onOpenSearch={(searchQuery) => openYouTubeSearch(searchQuery)} onCreateRoom={(roomSource, isPublic) => createRoom(roomSource, isPublic).then(() => undefined)} onJoinRoom={enterRoom} onAcceptInvite={() => { if (pendingInvite) void enterRoom(pendingInvite.roomId, pendingInvite.inviteToken) }} hasInvite={Boolean(pendingInvite)} /> : view === 'youtube-browser' ? <YouTubeSearchBrowser locale={locale} initialQuery={mediaSearchQuery} onBack={() => setView(activeRoomId ? 'room' : 'home')} onPlay={(video) => void selectYouTubeResult(video)} onPlayLink={(url) => void playMediaLink(url)} /> : view === 'room' ? <>
       <div className="room-content">
         <section className="room-titlebar"><div><div className="room-kicker"><span className="live-pulse" /> {roomPublic ? (locale === 'ar' ? 'غرفة عامة' : 'PUBLIC ROOM') : (locale === 'ar' ? 'غرفة خاصة' : 'PRIVATE ROOM')} <span className="kicker-separator">/</span> {locale === 'ar' ? 'مشاهدة الليلة' : 'TONIGHT’S WATCH'}</div><h1>{roomTitle}</h1></div><div className="room-title-actions"><button className="privacy-toggle" type="button" onClick={() => void toggleRoomVisibility()} aria-label={locale === 'ar' ? 'تغيير ظهور الغرفة' : 'Change room visibility'}>{roomPublic ? <Globe2 size={14} /> : <LockKeyhole size={14} />}{roomPublic ? (locale === 'ar' ? 'عام' : 'Public') : (locale === 'ar' ? 'خاص' : 'Private')}<ChevronDown size={13} /></button><button className="invite-button" type="button" onClick={shareRoom}>{copied ? <Check size={15} /> : <Share2 size={15} />}<span>{copied ? (locale === 'ar' ? 'تم النسخ' : 'Copied') : (locale === 'ar' ? 'دعوة' : 'Invite')}</span></button></div></section>
-
-        <form className="room-search" onSubmit={openSearch}><Search size={17} /><input id="room-search" aria-label={locale === 'ar' ? 'ابحث أو الصق رابط فيديو' : 'Search or paste a video link'} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={locale === 'ar' ? 'ابحث عن فيديو أو الصق رابطه...' : 'Search a video or paste a link...'} /><span className="duration-hint">24h</span><button type="submit" aria-label={locale === 'ar' ? 'ابحث عن فيديوهات' : 'Search videos'}><Search size={16} /></button></form>
-        <div className="search-footnote"><span>{locale === 'ar' ? `بحث ${source}` : `Search ${source}`}</span><button type="button" onClick={() => setPanel('sources')}><Globe2 size={13} /> {locale === 'ar' ? 'تصفح المنصات' : 'Browse sources'} <ChevronDown size={12} /></button><span className="supported-note"><ShieldCheck size={12} /> {locale === 'ar' ? '4K / 240fps عند الدعم · 24 ساعة' : '4K / 240fps when available · 24h'}</span></div>
 
         <div className="room-grid">
           <section className="watch-column" aria-label={locale === 'ar' ? 'مشاهدة معًا' : 'Watch together'}>
@@ -485,7 +476,7 @@ export function WatchRoom() {
       </div>
       <div className="mobile-panel-scrim" aria-hidden="true" onClick={() => setPanel(null)} />
       <footer className="room-footer"><span><span className="footer-live" /> {locale === 'ar' ? 'غرفة mkemo' : 'mkemo room'} <b>{activeRoomId?.slice(0, 8).toUpperCase()}</b></span><span className="footer-copyright">{locale === 'ar' ? 'مساحة للحظات اللي تحبونها.' : 'A room for the things you love.'}</span><button type="button" onClick={shareRoom}><Share2 size={14} /> {locale === 'ar' ? 'مشاركة الغرفة' : 'Share room'}</button></footer>
-    </> : <ProfilePanel locale={locale} profileImage={profileImage} posts={posts} onBack={() => setView(activeRoomId ? 'room' : 'home')} onNotice={showNotice} onPhotoChange={selectPhoto} />}
+    </> : <ProfilePanel locale={locale} profileImage={profileImage} posts={posts} onBack={() => setView(activeRoomId ? 'room' : 'youtube-browser')} onNotice={showNotice} onPhotoChange={selectPhoto} />}
 
 
     {notice && <div className="notice-toast" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label={locale === 'ar' ? 'إغلاق الإشعار' : 'Dismiss notification'}><X size={15} /></button></div>}

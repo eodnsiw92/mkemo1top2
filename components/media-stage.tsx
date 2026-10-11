@@ -320,7 +320,8 @@ export function MediaStage({
   function handlePlayerError() {
     setBuffering(false)
     setPlayerError(true)
-    onNotice(isArabic ? labels.loadError : labels.loadError)
+    onPlaybackStateChange(false)
+    onNotice(labels.loadError)
   }
 
   return (
@@ -385,6 +386,18 @@ export function MediaStage({
         </>
       )}
 
+      {canUseSharedPlayer && !isPlaying && !buffering && !playerError && (
+        <button
+          className="stage-resume-button"
+          type="button"
+          disabled={!controlsEnabled}
+          onClick={onTogglePlay}
+          aria-label={labels.play}
+        >
+          <Play size={24} fill="currentColor" />
+        </button>
+      )}
+
       <div className="stage-topbar">
         <span className="stage-live"><i /> {labels.live}</span>
         <div className="stage-topbar-actions">
@@ -400,11 +413,11 @@ export function MediaStage({
           {playerError && mediaUrl && <div className="stage-player-error" role="alert"><span>{labels.loadError}</span><a href={mediaUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> {labels.openSource}</a></div>}
           <div className="stage-controls" dir="ltr">
             <div className="stage-control-group stage-control-main">
-              <button className="stage-play-control" type="button" onClick={onTogglePlay} disabled={!controlsEnabled || !hasPlayableSource} aria-label={isPlaying ? labels.pause : labels.play}>
+              <button className="stage-play-control" type="button" onClick={onTogglePlay} disabled={!controlsEnabled || !hasPlayableSource || playerError} aria-label={isPlaying ? labels.pause : labels.play}>
                 {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
               </button>
-              <button className="stage-skip-control" type="button" onClick={() => seekBy(-10)} disabled={!controlsEnabled || !hasPlayableSource} aria-label={labels.rewind}><RotateCcw size={15} /></button>
-              <button className="stage-skip-control" type="button" onClick={() => seekBy(10)} disabled={!controlsEnabled || !hasPlayableSource} aria-label={labels.forward}><RotateCw size={15} /></button>
+              <button className="stage-skip-control" type="button" onClick={() => seekBy(-10)} disabled={!controlsEnabled || !hasPlayableSource || playerError} aria-label={labels.rewind}><RotateCcw size={15} /></button>
+              <button className="stage-skip-control" type="button" onClick={() => seekBy(10)} disabled={!controlsEnabled || !hasPlayableSource || playerError} aria-label={labels.forward}><RotateCw size={15} /></button>
               <div className="stage-volume-control">
                 <button type="button" onClick={toggleMute} aria-label={isMuted || volume === 0 ? labels.unmute : labels.mute}>
                   {isMuted || volume === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}
@@ -436,7 +449,7 @@ export function MediaStage({
             }}
             onPointerUp={(event) => onCommitSeek(Number(event.currentTarget.value))}
             onKeyUp={(event) => onCommitSeek(Number(event.currentTarget.value))}
-            disabled={!controlsEnabled || !hasPlayableSource}
+            disabled={!controlsEnabled || !hasPlayableSource || playerError}
           />
           {settingsOpen && (
             <div className="stage-settings-panel" id="stage-settings-panel" role="dialog" aria-label={labels.settings}>

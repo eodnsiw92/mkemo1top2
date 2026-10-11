@@ -4,6 +4,24 @@ export type PlayableSource =
   | { kind: 'provider'; url: string; label: string }
   | { kind: 'embed'; url: string; label: string }
 
+const urlProtocolPattern = /^[a-z][a-z\d+.-]*:\/\//i
+
+export function isMediaUrlInput(value: string) {
+  const input = value.trim()
+  return urlProtocolPattern.test(input)
+    || input.startsWith('//')
+    || /^(?:[\w-]+\.)+[a-z]{2,}(?::\d+)?(?:[/?#].*)?$/i.test(input)
+}
+
+export function getPlayableSourceFromInput(value: string): PlayableSource | null {
+  const input = value.trim()
+  if (!isMediaUrlInput(input)) return null
+  const normalizedUrl = input.startsWith('//')
+    ? `https:${input}`
+    : urlProtocolPattern.test(input) ? input : `https://${input}`
+  return getPlayableSource(normalizedUrl)
+}
+
 const mediaFilePattern = /\.(?:mp4|m4v|webm|ogg|oga|ogv|opus|mov|avi|m3u8|mpd|flv|mp3|m4a|m4b|aac|wav|flac)(?:$)/i
 const providerLabels: Array<{ label: string; hosts: string[] }> = [
   { label: 'YouTube', hosts: ['youtube.com', 'youtube-nocookie.com', 'youtu.be'] },
@@ -24,6 +42,16 @@ const providerLabels: Array<{ label: string; hosts: string[] }> = [
   { label: 'Disney+', hosts: ['disneyplus.com'] },
   { label: 'Max', hosts: ['max.com', 'hbomax.com'] },
 ]
+
+const supportedRoomSources = new Set([
+  'Direct media',
+  'External site',
+  ...providerLabels.map(({ label }) => label),
+])
+
+export function isSupportedRoomSource(value: unknown): value is string {
+  return typeof value === 'string' && supportedRoomSources.has(value)
+}
 
 function matchesHost(host: string, domain: string) {
   return host === domain || host.endsWith(`.${domain}`)
