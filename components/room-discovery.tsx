@@ -41,7 +41,7 @@ const copy = {
     sourceLabel: 'مصدر المشاهدة', allPlatforms: 'كل المنصات', choosePlatform: 'اختر منصة المشاهدة', visibility: 'ظهور الغرفة', public: 'عام', private: 'خاصة',
     listTitle: 'غرف تستاهل المشاهدة', listSubtitle: 'اختاروا الليلة اللي على مزاجكم', preview: 'مباشر', startedBy: 'غرفة', watching: 'مشاهدين',
     emptyTitle: 'ما فيه غرف عامة للحين', emptyDescription: 'أنشئ غرفة وادع أصحابك عشان تبدأون المشاهدة سوا.', legal: 'كل شخص يستخدم اشتراكه الخاص. المنصات المحمية تفتح رسميًا بدون مشاركة كلمات المرور أو تجاوز DRM.',
-    fps: 'سلاسة تصل إلى 120 إطار/ث عند دعم الجهاز والمتصفح ومصدر الفيديو.', create: 'إنشاء غرفة مشاهدة', invite: 'دعوة أصدقاء',
+    fps: 'دقة 4K و240fps عند دعم المصدر والجهاز والشاشة.', create: 'إنشاء غرفة مشاهدة', invite: 'دعوة أصدقاء',
     createTitle: 'جهّزوا سهرتكم', createDescription: 'أنشئوا الغرفة، ثم حمّلوا الفيديو ليظهر عنوانه تلقائيًا.', createRoom: 'إنشاء الغرفة', close: 'إغلاق', joinInvite: 'انضم إلى الغرفة الخاصة',
   },
   en: {
@@ -49,7 +49,7 @@ const copy = {
     sourceLabel: 'WATCH FROM', allPlatforms: 'All platforms', choosePlatform: 'Choose a streaming platform', visibility: 'ROOM VISIBILITY', public: 'Public', private: 'Private',
     listTitle: 'Rooms worth watching', listSubtitle: 'Pick tonight’s mood', preview: 'LIVE ROOMS', startedBy: 'Room', watching: 'watching',
     emptyTitle: 'No public rooms yet', emptyDescription: 'Create a room and invite friends to start watching together.', legal: 'Everyone uses their own subscription. Protected services open officially; passwords are never shared and DRM is never bypassed.',
-    fps: 'Up to 120 fps when supported by the device, browser, and video source.', create: 'Create a watch room', invite: 'Invite friends',
+    fps: '4K resolution and 240fps when supported by the source, device, and display.', create: 'Create a watch room', invite: 'Invite friends',
     createTitle: 'Set up your watch night', createDescription: 'Create the room, then load a video to use its title automatically.', createRoom: 'Create room', close: 'Close', joinInvite: 'Join private room',
   },
 } as const
@@ -88,7 +88,7 @@ export function RoomDiscovery({ locale, onToggleLocale, onOpenProfile, onOpenSea
       <div className="discovery-content">
         <header className="discovery-header">
           <button className="discovery-profile-button" type="button" onClick={onOpenProfile} aria-label={locale === 'ar' ? 'الملف الشخصي' : 'Profile'}><span>م</span></button>
-          <div className="discovery-wordmark" aria-label="mkemo"><span className="discovery-mark"><Play size={19} fill="currentColor" /></span><span>mkemo<span className="discovery-period">.</span></span></div>
+          <div className="discovery-wordmark" aria-label="mkemo"><span className="discovery-mark"><Play size={19} fill="currentColor" /></span><span>mkemo</span></div>
           <div className="discovery-header-actions"><button className="discovery-search-button" type="button" onClick={() => onOpenSearch()} aria-label={locale === 'ar' ? 'فتح البحث والمنصات' : 'Open media search'}><Search size={17} /></button><button className="discovery-language-button" type="button" onClick={onToggleLocale} aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}><Languages size={16} /><span>{t.language}</span></button><button className="discovery-invite-button" type="button" onClick={() => setCreateOpen(true)} aria-label={t.invite}><UsersRound size={19} /></button></div>
         </header>
 
