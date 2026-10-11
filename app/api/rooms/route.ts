@@ -6,8 +6,9 @@ import { roomEvents, roomMembers, rooms } from '@/lib/db/schema'
 import { cleanMessage, containsProhibitedSearch } from '@/lib/content-safety'
 import { getGuestId, guestDisplayName, hashInviteToken } from '@/lib/guest-session'
 import { countryFlagFromAcceptLanguage, withCountryFlag } from '@/lib/country'
-import { isSupportedRoomSource } from '@/lib/media-url'
 import { isSameOriginRequest } from '@/lib/request-origin'
+
+const sources = new Set(['YouTube', 'Netflix', 'Prime Video', 'Disney+', 'Twitch'])
 
 export async function GET() {
   const activeSince = new Date(Date.now() - 45_000)
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
 
   const input = payload as { source?: unknown; isPublic?: unknown; displayName?: unknown }
   const title = 'Watch together'
-  const source = isSupportedRoomSource(input.source) ? input.source : ''
+  const source = typeof input.source === 'string' && sources.has(input.source) ? input.source : ''
   if (!source) return NextResponse.json({ error: 'Choose a supported video source.' }, { status: 400 })
 
   const guestId = await getGuestId()
