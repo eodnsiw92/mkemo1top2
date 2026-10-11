@@ -423,46 +423,6 @@ button { color: inherit; }
 .discovery-search input::placeholder { color: rgba(246, 243, 255, .8); }
 .discovery-search .discovery-clear { color: rgba(255,255,255,.8); }
 .discovery-search:focus-within { border-color: rgba(255,255,255,.32); box-shadow: 0 0 0 3px rgba(255,255,255,.07), 0 16px 42px rgba(13, 4, 41, .18); }
-.platform-shortcuts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(2px, .7vw, 9px) clamp(8px, 2.6vw, 30px);
-  margin: 8px auto 24px;
-}
-.platform-shortcut {
-  display: flex;
-  min-width: 0;
-  min-height: clamp(76px, 12vw, 138px);
-  align-items: center;
-  justify-content: center;
-  border-radius: 18px;
-  color: #fff;
-  text-decoration: none;
-  transition: background-color .18s ease, transform .18s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.platform-shortcut:hover,.platform-shortcut:focus-visible { background: rgba(255,255,255,.075); }
-.platform-shortcut:active { transform: scale(.97); }
-.platform-shortcut:focus-visible { outline: 2px solid rgba(255,255,255,.8); outline-offset: 2px; }
-.platform-shortcut-visual { position: relative; display: flex; width: 100%; min-height: inherit; align-items: center; justify-content: center; gap: clamp(5px, 1.2vw, 14px); color: #fff; text-shadow: 0 3px 4px rgba(10, 5, 25, .32); }
-.platform-shortcut-visual img { display: block; width: auto; max-width: 84%; max-height: 76px; object-fit: contain; filter: brightness(0) invert(1) drop-shadow(0 2px 2px rgba(10, 5, 25, .28)); }
-.platform-shortcut-icon { flex: 0 0 auto; width: clamp(31px, 5.4vw, 58px); height: clamp(31px, 5.4vw, 58px); }
-.platform-shortcut-wordmark { color: #fff; font-size: clamp(25px, 4.8vw, 56px); font-weight: 760; letter-spacing: -.055em; line-height: .98; white-space: nowrap; }
-.platform-shortcut-suffix { font-size: clamp(16px, 2.6vw, 30px); font-weight: 820; letter-spacing: -.04em; }
-.platform-shortcut-youtube img { width: min(88%, 300px); max-height: 82px; }
-.platform-shortcut-netflix img { width: min(88%, 290px); max-height: 67px; }
-.platform-shortcut-crunchyroll img { width: min(84%, 270px); max-height: 88px; }
-.platform-shortcut-x img { width: clamp(48px, 8.3vw, 96px); height: clamp(48px, 8.3vw, 96px); }
-.platform-shortcut-tubi img { width: min(88%, 285px); max-height: 76px; }
-.platform-shortcut-youtube-live img { width: clamp(78px, 13vw, 145px); max-height: 72px; }
-.platform-shortcut-drive img { width: clamp(44px, 6.5vw, 70px); height: clamp(44px, 6.5vw, 70px); }
-.platform-shortcut-drive .platform-shortcut-wordmark { font-weight: 420; letter-spacing: -.04em; }
-.platform-shortcut-twitch .platform-shortcut-wordmark { font-size: clamp(36px, 7.5vw, 84px); font-weight: 950; letter-spacing: -.09em; }
-.platform-shortcut-playlist .platform-shortcut-icon,.platform-shortcut-karaoke .platform-shortcut-icon { display: none; }
-.platform-shortcut-playlist .platform-shortcut-wordmark,.platform-shortcut-karaoke .platform-shortcut-wordmark,.platform-shortcut-likes .platform-shortcut-wordmark { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(31px, 6vw, 66px); font-style: italic; font-weight: 500; letter-spacing: -.055em; }
-.platform-shortcut-web .platform-shortcut-wordmark { font-size: clamp(32px, 6vw, 64px); font-weight: 850; letter-spacing: -.04em; }
-.platform-shortcut-likes .platform-shortcut-icon { width: clamp(25px, 4.2vw, 44px); height: clamp(25px, 4.2vw, 44px); }
-.platform-shortcut-history .platform-shortcut-wordmark { font-weight: 520; letter-spacing: -.045em; }
 .discovery-selects { width: 100%; margin: 22px auto 30px; }
 .platform-picker,.visibility-picker { border-color: rgba(255,255,255,.14); background: rgba(11,7,48,.28); color: #f1edff; }
 .platform-picker-icon { background: rgba(255,255,255,.12); color: #fff; }
@@ -497,14 +457,6 @@ button { color: inherit; }
   .discovery-search { height: 62px; margin-bottom: 9px; padding-inline: 12px; }
   .discovery-search-submit { width: 42px; height: 42px; }
   .discovery-search-submit svg { width: 34px; height: 34px; }
-  .platform-shortcuts { gap: 2px 8px; margin: 4px auto 18px; }
-  .platform-shortcut { min-height: 76px; border-radius: 13px; }
-  .platform-shortcut-visual img { max-height: 56px; }
-  .platform-shortcut-youtube img { max-height: 60px; }
-  .platform-shortcut-netflix img { max-height: 48px; }
-  .platform-shortcut-crunchyroll img { max-height: 58px; }
-  .platform-shortcut-tubi img { max-height: 54px; }
-  .platform-shortcut-youtube-live img { max-height: 47px; }
   .discovery-selects { margin: 14px auto 25px; }
 }
 
@@ -951,7 +903,7 @@ button { color: inherit; }
 .media-hub-provider-mark.media-service-tubi { background: #fa3c54; border-color: rgba(255, 134, 149, .75); }
 .media-hub-provider-mark.media-service-photos, .media-hub-provider-mark.media-service-drive { background: #fff; }
 .media-hub-provider-mark.media-service-youtube img,
-.media-hub-provider-mark.media-service-youtube-live img { filter: none; }
+.media-hub-provider-mark.media-service-youtube-live img { filter: brightness(0) invert(1); }
 .media-hub-provider-mark.media-service-netflix img,
 .media-hub-provider-mark.media-service-crunchyroll img,
 .media-hub-provider-mark.media-service-twitch img,
