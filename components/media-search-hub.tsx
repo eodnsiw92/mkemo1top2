@@ -3,6 +3,7 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import {
   ArrowLeft,
+  ExternalLink,
   Globe2,
   Heart,
   History,
@@ -60,12 +61,25 @@ const brandAssetUrl = (asset: string) => `https://thesvg.org/icons/${asset}.svg`
 
 export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpenRoom, onOpenProfile, onSearch, onSelectService }: MediaSearchHubProps) {
   const [query, setQuery] = useState(initialQuery)
+  const [selectedService, setSelectedService] = useState<string | null>(null)
   const isArabic = locale === 'ar'
+  const selectedServiceInfo = [...leftServices, ...rightServices].find((service) => service.name === selectedService)
+  const SelectedServiceIcon = selectedServiceInfo?.icon
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const value = query.trim()
-    if (value) onSearch(value)
+    if (!value) return
+    if (selectedService) onSelectService(selectedService, value)
+    else onSearch(value)
+  }
+
+  function selectService(serviceName: string) {
+    if (serviceName === 'Likes') {
+      onSelectService(serviceName, query.trim())
+      return
+    }
+    setSelectedService(serviceName)
   }
 
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -78,7 +92,7 @@ export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpe
   function renderService(service: MediaService) {
     const Icon = service.icon
     return (
-      <button className={`media-service media-service-${service.tone}`} type="button" key={service.name} onClick={() => onSelectService(service.name, query.trim())}>
+      <button className={`media-service media-service-${service.tone}`} type="button" key={service.name} onClick={() => selectService(service.name)} aria-label={isArabic ? `البحث عبر ${service.name}` : `Search with ${service.name}`}>
         <span className="media-service-mark" aria-hidden="true">
           {service.logo ? <img src={brandAssetUrl(service.logo)} alt="" loading="lazy" /> : <Icon size={22} strokeWidth={1.8} />}
         </span>
@@ -95,33 +109,69 @@ export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpe
       <div className="media-hub-content">
         <div className="media-hub-heading">
           <button className="media-hub-back" type="button" onClick={onBack} aria-label={isArabic ? 'رجوع' : 'Back'}><ArrowLeft size={18} /></button>
-          <div><span>{isArabic ? 'كل ما تحب، في مكان واحد' : 'YOUR ENTERTAINMENT, CONNECTED'}</span><h1>{isArabic ? 'ابحث واكتشف' : 'Search & explore'}</h1></div>
+          <div><span>{selectedServiceInfo ? (isArabic ? 'بحث داخل المنصة' : 'SEARCH INSIDE THE APP') : (isArabic ? 'كل ما تحب، في مكان واحد' : 'YOUR ENTERTAINMENT, CONNECTED')}</span><h1>{selectedServiceInfo ? (isArabic ? `ابحث في ${selectedServiceInfo.name}` : `Search ${selectedServiceInfo.name}`) : (isArabic ? 'ابحث واكتشف' : 'Search & explore')}</h1></div>
         </div>
 
-        <form className="media-hub-search" role="search" onSubmit={submitSearch}>
-          <Search size={20} aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            placeholder={isArabic ? 'بحث' : 'Search movies, shows, and more'}
-            aria-label={isArabic ? 'بحث عن محتوى' : 'Search for media'}
-            autoComplete="off"
-          />
-          <button type="submit" aria-label={isArabic ? 'بحث' : 'Search'}><Search size={17} /></button>
-        </form>
+        {selectedServiceInfo ? (
+          <div className="media-hub-service-search">
+            <button className="media-hub-all-services" type="button" onClick={() => setSelectedService(null)}><ArrowLeft size={15} />{isArabic ? 'كل التطبيقات' : 'All apps'}</button>
+            <div className="media-hub-provider-card">
+              <span className={`media-hub-provider-mark media-service-${selectedServiceInfo.tone}`} aria-hidden="true">
+                {selectedServiceInfo.logo ? <img src={brandAssetUrl(selectedServiceInfo.logo)} alt="" /> : SelectedServiceIcon && <SelectedServiceIcon size={28} strokeWidth={1.7} />}
+              </span>
+              <div className="media-hub-provider-copy">
+                <span>{isArabic ? 'بحث داخل التطبيق' : 'SEARCH INSIDE THE APP'}</span>
+                <h2>{selectedServiceInfo.name}</h2>
+                <p>{isArabic ? `ابحث عن المحتوى الذي تريد مشاهدته على ${selectedServiceInfo.name}.` : `Find something to watch on ${selectedServiceInfo.name}.`}</p>
+              </div>
+            </div>
+            <form className="media-hub-search media-hub-search-selected" role="search" onSubmit={submitSearch}>
+              <Search size={20} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder={isArabic ? `ابحث في ${selectedServiceInfo.name}` : `Search ${selectedServiceInfo.name}`}
+                aria-label={isArabic ? `البحث في ${selectedServiceInfo.name}` : `Search ${selectedServiceInfo.name}`}
+                autoComplete="off"
+                autoFocus
+              />
+              <button type="submit" aria-label={isArabic ? 'بحث' : 'Search'}><Search size={17} /></button>
+            </form>
+            <div className="media-hub-provider-meta">
+              <span><Globe2 size={15} />{isArabic ? 'بحث من المصدر الرسمي' : 'Official source search'}</span>
+              <span><ExternalLink size={14} />{isArabic ? 'تفتح النتائج على المنصة' : 'Results open on the service'}</span>
+            </div>
+          </div>
+        ) : (
+          <>
+            <form className="media-hub-search" role="search" onSubmit={submitSearch}>
+              <Search size={20} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder={isArabic ? 'بحث' : 'Search movies, shows, and more'}
+                aria-label={isArabic ? 'بحث عن محتوى' : 'Search for media'}
+                autoComplete="off"
+              />
+              <button type="submit" aria-label={isArabic ? 'بحث' : 'Search'}><Search size={17} /></button>
+            </form>
 
-        <div className="media-hub-section-heading">
-          <div><h2>{isArabic ? 'منصاتك واختصاراتك' : 'Your platforms & shortcuts'}</h2><p>{isArabic ? 'اختر وجهتك لفتح البحث الرسمي' : 'Choose a destination to open its official search'}</p></div>
-          <span>{isArabic ? '١٥ وجهة' : '15 DESTINATIONS'}</span>
-        </div>
+            <div className="media-hub-section-heading">
+              <div><h2>{isArabic ? 'منصاتك واختصاراتك' : 'Your platforms & shortcuts'}</h2><p>{isArabic ? 'اختر منصة لفتح البحث الخاص بها' : 'Choose an app to open its own search'}</p></div>
+              <span>{isArabic ? '١٥ وجهة' : '15 DESTINATIONS'}</span>
+            </div>
 
-        <div className="media-service-grid" aria-label={isArabic ? 'منصات الوسائط' : 'Media services'}>
-          {[...leftServices, ...rightServices].map(renderService)}
-        </div>
+            <div className="media-service-grid" aria-label={isArabic ? 'منصات الوسائط' : 'Media services'}>
+              {[...leftServices, ...rightServices].map(renderService)}
+            </div>
 
-        <p className="media-hub-note">{isArabic ? 'سيُفتح المحتوى على موقع الخدمة الرسمي. استخدم اشتراكك وحسابك الخاص.' : 'Services open on their official websites. Use your own account and subscription.'}</p>
+            <p className="media-hub-note">{isArabic ? 'تُفتح النتائج من المصدر الرسمي. استخدم حسابك واشتراكك الخاص.' : 'Search results open on the official service. Use your own account and subscription.'}</p>
+          </>
+        )}
       </div>
 
       <nav className="media-mobile-nav" aria-label={isArabic ? 'التنقل' : 'Navigation'}>
