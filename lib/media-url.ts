@@ -46,8 +46,6 @@ const providerLabels: Array<{ label: string; hosts: string[] }> = [
 const supportedRoomSources = new Set([
   'Direct media',
   'External site',
-  'Instagram',
-  'Drive',
   ...providerLabels.map(({ label }) => label),
 ])
 
@@ -87,21 +85,6 @@ export function getPlayableSource(value: string): PlayableSource | null {
       return id && /^[\w-]{6,20}$/.test(id)
         ? { kind: 'youtube', id, url: url.href, label: 'YouTube' }
         : null
-    }
-
-    if (matchesHost(host, 'tiktok.com')) {
-      const videoId = url.pathname.match(/\/(?:video|v|embed(?:\/v2)?)\/(\d{8,25})/)?.[1]
-      if (videoId) return { kind: 'embed', url: `https://www.tiktok.com/embed/v2/${videoId}`, label: 'TikTok' }
-    }
-
-    if (matchesHost(host, 'instagram.com')) {
-      const postId = url.pathname.match(/\/(?:p|reel|reels|tv)\/([\w-]{5,40})/)?.[1]
-      if (postId) return { kind: 'embed', url: `https://www.instagram.com/p/${postId}/embed`, label: 'Instagram' }
-    }
-
-    if (matchesHost(host, 'drive.google.com')) {
-      const fileId = url.pathname.match(/\/file\/d\/([\w-]{10,})/)?.[1] ?? url.searchParams.get('id')
-      if (fileId && /^[\w-]{10,}$/.test(fileId)) return { kind: 'embed', url: `https://drive.google.com/file/d/${fileId}/preview`, label: 'Drive' }
     }
 
     if (mediaFilePattern.test(url.pathname)) {
