@@ -814,6 +814,21 @@ button { color: inherit; }
 .profile-rave .profile-gallery-photo { min-height: 140px; }
 .profile-rave .profile-dashboard-legal { padding: 0 14px; color: rgba(255,255,255,.55); }
 .profile-rave button:focus-visible { outline-color: #e1d4ff; }
+.profile-whatsapp-support { position: fixed; z-index: 15; inset-inline-end: max(18px, calc((100vw - 740px) / 2 + 18px)); bottom: max(18px, env(safe-area-inset-bottom)); display: flex; min-height: 58px; align-items: center; gap: 10px; padding: 7px 15px 7px 9px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; background: linear-gradient(135deg, rgba(34,34,48,.97), rgba(28,51,47,.97)); color: white; text-decoration: none; box-shadow: 0 8px 28px rgba(7,8,25,.38), 0 0 24px rgba(37,211,102,.16); backdrop-filter: blur(12px); transition: transform .2s ease, box-shadow .2s ease; }
+.profile-whatsapp-support:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(7,8,25,.44), 0 0 28px rgba(37,211,102,.25); }
+.profile-whatsapp-support:focus-visible { outline: 3px solid #9ff2b9; outline-offset: 4px; }
+.profile-whatsapp-mark { display: grid; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(37,211,102,.2); }
+.profile-whatsapp-mark img { display: block; width: 27px; height: 27px; }
+.profile-whatsapp-label { display: flex; flex-direction: column; gap: 2px; }
+.profile-whatsapp-label strong { color: #f8fff9; font-size: 11px; font-weight: 760; white-space: nowrap; }
+.profile-whatsapp-label small { color: rgba(226,245,232,.73); font-size: 9px; white-space: nowrap; }
+@media (max-width: 420px) {
+  .profile-whatsapp-support { min-height: 50px; gap: 8px; padding: 5px 12px 5px 6px; }
+  .profile-whatsapp-mark { width: 36px; height: 36px; }
+  .profile-whatsapp-mark img { width: 24px; height: 24px; }
+  .profile-whatsapp-label strong { font-size: 10px; }
+  .profile-whatsapp-label small { font-size: 8px; }
+}
 @media (min-width: 761px) {
   .profile-view.profile-rave { padding-top: 34px; }
   .profile-rave-topbar { padding-inline: 34px; }
