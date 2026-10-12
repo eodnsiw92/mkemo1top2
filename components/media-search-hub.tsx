@@ -1,188 +1,257 @@
-'use client'
+"use client"
 
-import { useState, type FormEvent, type KeyboardEvent } from 'react'
-import {
-  ArrowLeft,
+import React, { useState } from "react"
+import { 
+  Globe, 
+  Search, 
+  Youtube, 
+  Play, 
+  ArrowRight, 
+  Sparkles, 
   ExternalLink,
-  Globe2,
-  Heart,
-  History,
-  Home,
-  Images,
-  ListMusic,
-  Mic2,
-  Radio,
-  Search,
-  UsersRound,
-  type LucideIcon,
-} from 'lucide-react'
+  ShieldCheck,
+  Gamepad2,
+  Tv,
+  Zap,
+  Terminal
+} from "lucide-react"
 
-type MediaService = {
-  name: string
-  icon: LucideIcon
-  brand?: string
-  logo?: string
-  tone: string
+interface MediaSearchHubProps {
+  onSelectMedia: (media: { type: 'youtube' | 'web' | 'video'; url: string; title: string }) => void;
 }
 
-type MediaSearchHubProps = {
-  locale: 'ar' | 'en'
-  initialQuery: string
-  onBack: () => void
-  onOpenHome: () => void
-  onOpenRoom: () => void
-  onOpenProfile: () => void
-  onSearch: (query: string) => void
-  onSelectService: (service: string, query: string) => void
-}
+export function MediaSearchHub({ onSelectMedia }: MediaSearchHubProps) {
+  const [activeTab, setActiveTab] = useState<'web' | 'youtube'>('web');
+  const [inputUrl, setInputUrl] = useState("");
 
-const leftServices: MediaService[] = [
-  { name: 'YouTube', icon: Radio, logo: 'youtube/default', tone: 'youtube' },
-  { name: 'NETFLIX', icon: Radio, logo: 'netflix/wordmark', tone: 'netflix' },
-  { name: 'Crunchyroll', icon: Radio, logo: 'crunchyroll/default', tone: 'crunchyroll' },
-  { name: 'twitch', icon: Radio, logo: 'twitch/default', tone: 'twitch' },
-  { name: 'Playlist', icon: ListMusic, tone: 'playlist' },
-  { name: 'Photos', icon: Images, logo: 'google-photos/default', tone: 'photos' },
-  { name: 'Likes', icon: Heart, tone: 'likes' },
-]
+  const handleWebLaunch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!inputUrl.trim()) return;
 
-const rightServices: MediaService[] = [
-  { name: 'X', icon: Radio, logo: 'x/mono', tone: 'x' },
-  { name: 'Prime Video', icon: Radio, logo: 'prime-video/default', tone: 'prime' },
-  { name: 'tubi', icon: Radio, logo: 'tubi/default', tone: 'tubi' },
-  { name: 'YouTube Live', icon: Radio, logo: 'youtube/default', tone: 'youtube-live' },
-  { name: 'Drive', icon: Images, logo: 'google-drive/default', tone: 'drive' },
-  { name: 'WEB', icon: Globe2, tone: 'web' },
-  { name: 'Karaoke', icon: Mic2, tone: 'karaoke' },
-  { name: 'History', icon: History, tone: 'history' },
-]
-
-const brandAssetUrl = (asset: string) => `https://thesvg.org/icons/${asset}.svg`
-
-export function MediaSearchHub({ locale, initialQuery, onBack, onOpenHome, onOpenRoom, onOpenProfile, onSearch, onSelectService }: MediaSearchHubProps) {
-  const [query, setQuery] = useState(initialQuery)
-  const [selectedService, setSelectedService] = useState<string | null>(null)
-  const isArabic = locale === 'ar'
-  const selectedServiceInfo = [...leftServices, ...rightServices].find((service) => service.name === selectedService)
-  const SelectedServiceIcon = selectedServiceInfo?.icon
-  const isYouTubeSearch = selectedServiceInfo?.name === 'YouTube'
-
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const value = query.trim()
-    if (!value) return
-    if (selectedService) onSelectService(selectedService, value)
-    else onSearch(value)
-  }
-
-  function selectService(serviceName: string) {
-    if (serviceName === 'Likes') {
-      onSelectService(serviceName, query.trim())
-      return
+    let targetUrl = inputUrl.trim();
+    
+    const isUrl = targetUrl.includes('.') && !targetUrl.includes(' ');
+    if (!isUrl) {
+      targetUrl = `https://www.google.com/search?q=${encodeURIComponent(targetUrl)}`;
+    } else if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+      targetUrl = 'https://' + targetUrl;
     }
-    setSelectedService(serviceName)
-  }
 
-  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) {
-      event.preventDefault()
-      event.currentTarget.form?.requestSubmit()
-    }
-  }
+    onSelectMedia({
+      type: 'web',
+      url: targetUrl,
+      title: inputUrl
+    });
+  };
 
-  function renderService(service: MediaService) {
-    const Icon = service.icon
-    return (
-      <button className={`media-service media-service-${service.tone}`} type="button" key={service.name} onClick={() => selectService(service.name)} aria-label={isArabic ? `البحث عبر ${service.name}` : `Search with ${service.name}`}>
-        <span className="media-service-mark" aria-hidden="true">
-          {service.logo ? <img src={brandAssetUrl(service.logo)} alt="" loading="lazy" /> : <Icon size={22} strokeWidth={1.8} />}
-        </span>
-        <span className="media-service-name">{service.name}</span>
-        <span className="media-service-action" aria-hidden="true"><ArrowLeft size={14} /></span>
-      </button>
-    )
-  }
+  const quickLaunchSites = [
+    { name: 'Google Engine', category: 'Search', url: 'https://www.google.com', icon: Globe, color: 'from-blue-500 to-cyan-400', badge: 'Search Engine' },
+    { name: 'Poki Arcade', category: 'Games', url: 'https://poki.com', icon: Gamepad2, color: 'from-fuchsia-600 to-pink-500', badge: 'Online Games' },
+    { name: 'CrazyGames', category: 'Games', url: 'https://www.crazygames.com', icon: Zap, color: 'from-amber-500 to-orange-500', badge: 'HD Games' },
+    { name: 'Web Portal', category: 'Media', url: 'https://www.bing.com', icon: Tv, color: 'from-emerald-500 to-teal-400', badge: 'Browse Portal' },
+  ];
 
   return (
-    <section className={`media-hub${isYouTubeSearch ? ' media-hub-youtube' : ''}`} dir={isArabic ? 'rtl' : 'ltr'} aria-label={isArabic ? 'البحث والمنصات' : 'Search and media platforms'}>
-      <div className="media-hub-glow media-hub-glow-one" aria-hidden="true" />
-      <div className="media-hub-glow media-hub-glow-two" aria-hidden="true" />
-      <div className="media-hub-content">
-        <div className="media-hub-heading">
-          <button className="media-hub-back" type="button" onClick={onBack} aria-label={isArabic ? 'رجوع' : 'Back'}><ArrowLeft size={18} /></button>
-          <div><span>{selectedServiceInfo ? (isArabic ? 'بحث داخل المنصة' : 'SEARCH INSIDE THE APP') : (isArabic ? 'كل ما تحب، في مكان واحد' : 'YOUR ENTERTAINMENT, CONNECTED')}</span><h1>{selectedServiceInfo ? (isArabic ? `ابحث في ${selectedServiceInfo.name}` : `Search ${selectedServiceInfo.name}`) : (isArabic ? 'ابحث واكتشف' : 'Search & explore')}</h1></div>
-        </div>
+    <div className="w-full max-w-5xl mx-auto p-1 bg-gradient-to-b from-white/15 via-white/5 to-transparent rounded-[2.5rem] shadow-[0_0_50px_rgba(124,58,237,0.15)] backdrop-blur-2xl transition-all duration-500">
+      <div className="w-full bg-slate-950/80 rounded-[2.4rem] p-6 md:p-8 border border-white/10 relative overflow-hidden">
+        
+        <div className="absolute -top-24 -left-24 w-72 h-72 bg-violet-600/20 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-indigo-600/20 rounded-full blur-[100px] pointer-events-none" />
 
-        {selectedServiceInfo ? (
-          <div className="media-hub-service-search">
-            <button className="media-hub-all-services" type="button" onClick={() => setSelectedService(null)}><ArrowLeft size={15} />{isArabic ? 'كل التطبيقات' : 'All apps'}</button>
-            <div className="media-hub-provider-card">
-              <span className={`media-hub-provider-mark media-service-${selectedServiceInfo.tone}`} aria-hidden="true">
-                {selectedServiceInfo.logo ? <img src={brandAssetUrl(selectedServiceInfo.logo)} alt="" /> : SelectedServiceIcon && <SelectedServiceIcon size={28} strokeWidth={1.7} />}
-              </span>
-              <div className="media-hub-provider-copy">
-                <span>{isArabic ? 'بحث داخل التطبيق' : 'SEARCH INSIDE THE APP'}</span>
-                <h2>{selectedServiceInfo.name}</h2>
-                <p>{isYouTubeSearch ? (isArabic ? 'تصفح نتائج يوتيوب وشغّل الفيديو هنا داخل mkemo.' : 'Browse YouTube results and play videos here in mkemo.') : (isArabic ? `ابحث عن المحتوى الذي تريد مشاهدته على ${selectedServiceInfo.name}.` : `Find something to watch on ${selectedServiceInfo.name}.`)}</p>
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-6 pb-6 border-b border-white/10 relative z-10">
+          
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-cyan-500 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+              <div className="relative p-3.5 bg-slate-900 rounded-2xl border border-white/10 flex items-center justify-center">
+                <Globe className="w-7 h-7 text-cyan-400 animate-pulse" />
               </div>
             </div>
-            <form className="media-hub-search media-hub-search-selected" role="search" onSubmit={submitSearch}>
-              <Search size={20} aria-hidden="true" />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                placeholder={isArabic ? `ابحث في ${selectedServiceInfo.name}` : `Search ${selectedServiceInfo.name}`}
-                aria-label={isArabic ? `البحث في ${selectedServiceInfo.name}` : `Search ${selectedServiceInfo.name}`}
-                autoComplete="off"
-                autoFocus
-              />
-              <button type="submit" aria-label={isArabic ? 'بحث' : 'Search'}><Search size={17} /></button>
-            </form>
-            <div className="media-hub-provider-meta">
-              <span><Globe2 size={15} />{isYouTubeSearch ? (isArabic ? 'نتائج يوتيوب الفعلية' : 'Live YouTube results') : (isArabic ? 'بحث من المصدر الرسمي' : 'Official source search')}</span>
-              <span>{isYouTubeSearch ? <Search size={14} /> : <ExternalLink size={14} />}{isYouTubeSearch ? (isArabic ? 'تظهر النتائج هنا في mkemo' : 'Results appear here in mkemo') : (isArabic ? 'تفتح النتائج على المنصة' : 'Results open on the service')}</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400">
+                  WEB ENGINE OS
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30 uppercase tracking-widest">
+                  v2.5 Next
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5 font-medium">High speed virtual browser for live sync session</p>
             </div>
           </div>
-        ) : (
-          <>
-            <form className="media-hub-search" role="search" onSubmit={submitSearch}>
-              <Search size={20} aria-hidden="true" />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                placeholder={isArabic ? 'ابحث في يوتيوب أو اختر منصة' : 'Search YouTube or choose another app'}
-                aria-label={isArabic ? 'بحث عن محتوى' : 'Search for media'}
-                autoComplete="off"
-              />
-              <button type="submit" aria-label={isArabic ? 'بحث' : 'Search'}><Search size={17} /></button>
+
+          <div className="flex items-center bg-slate-900/90 p-1.5 rounded-2xl border border-white/10 shadow-inner">
+            <button
+              onClick={() => setActiveTab('web')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${
+                activeTab === 'web'
+                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)]'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Globe className="w-4 h-4" />
+              <span>Web Browser</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('youtube')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${
+                activeTab === 'youtube'
+                  ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-[0_0_20px_rgba(225,29,72,0.4)]'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Youtube className="w-4 h-4" />
+              <span>YouTube HD</span>
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'web' && (
+          <div className="mt-8 space-y-8 relative z-10 animate-in fade-in duration-300">
+            
+            <form onSubmit={handleWebLaunch} className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 via-indigo-500 to-cyan-500 rounded-3xl blur-md opacity-25 group-hover:opacity-60 transition duration-500"></div>
+              
+              <div className="relative flex flex-col md:flex-row items-center gap-3 bg-slate-900/90 border border-white/15 p-2 md:p-2.5 rounded-2xl shadow-2xl backdrop-blur-xl">
+                
+                <div className="flex items-center gap-2 px-3 py-2 text-slate-400 border-b md:border-b-0 md:border-r border-white/10 w-full md:w-auto justify-between md:justify-start">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block" />
+                    <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
+                    <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span className="text-[11px] font-mono text-emerald-400/90 uppercase tracking-wider">SECURE HTTPS</span>
+                  </div>
+                </div>
+
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400" />
+                  <input
+                    type="text"
+                    value={inputUrl}
+                    onChange={(e) => setInputUrl(e.target.value)}
+                    placeholder="Enter website URL (e.g. example.com) or search term..."
+                    className="w-full bg-transparent py-3 pl-11 pr-4 text-sm font-mono text-white placeholder-slate-500 focus:outline-none"
+                  />
+                  {inputUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setInputUrl("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-white px-2 py-1 rounded-md bg-white/5"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full md:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all active:scale-95"
+                >
+                  <span>Launch Web</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </form>
 
-            <div className="media-hub-section-heading">
-              <div><h2>{isArabic ? 'منصاتك واختصاراتك' : 'Your platforms & shortcuts'}</h2><p>{isArabic ? 'ابحث في يوتيوب هنا أو اختر تطبيقًا آخر' : 'Search YouTube here or choose another app'}</p></div>
-              <span>{isArabic ? '١٥ وجهة' : '15 DESTINATIONS'}</span>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                  Quick Launch Platforms
+                </h3>
+                <span className="text-[11px] text-slate-500">Click to open instantly</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {quickLaunchSites.map((site, index) => {
+                  const Icon = site.icon;
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        setInputUrl(site.url);
+                        onSelectMedia({ type: 'web', url: site.url, title: site.name });
+                      }}
+                      className="group relative p-4 rounded-2xl bg-slate-900/60 hover:bg-slate-900 border border-white/10 hover:border-violet-500/50 transition-all duration-300 cursor-pointer overflow-hidden shadow-lg hover:shadow-violet-500/10"
+                    >
+                      <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl ${site.color} opacity-10 group-hover:opacity-20 rounded-bl-full transition-all duration-500`} />
+                      
+                      <div className="flex items-start justify-between mb-3">
+                        <div className={`p-3 rounded-xl bg-gradient-to-br ${site.color} text-white shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <span className="text-[10px] font-semibold text-slate-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+                          {site.badge}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-bold text-white group-hover:text-violet-300 transition-colors flex items-center justify-between">
+                          <span>{site.name}</span>
+                          <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
+                        </h4>
+                        <p className="text-[11px] text-slate-500 truncate font-mono">{site.url}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="media-service-grid" aria-label={isArabic ? 'منصات الوسائط' : 'Media services'}>
-              {[...leftServices, ...rightServices].map(renderService)}
+            <div className="p-4 rounded-2xl bg-violet-950/30 border border-violet-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Terminal className="w-5 h-5 text-violet-400" />
+                <p className="text-xs text-violet-200/80">
+                  You can browse any web page supporting iframe embedding or use search queries directly online.
+                </p>
+              </div>
+              <span className="text-[11px] font-bold text-violet-400 bg-violet-500/10 px-3 py-1 rounded-lg border border-violet-500/20 whitespace-nowrap">
+                100% Live Sync
+              </span>
             </div>
 
-            <p className="media-hub-note">{isArabic ? 'تظهر نتائج يوتيوب هنا، وتفتح بقية المنصات من مصادرها الرسمية. استخدم حسابك واشتراكك الخاص.' : 'YouTube results appear here; other apps open their official sites. Use your own account and subscription.'}</p>
-          </>
+          </div>
         )}
+
+        {activeTab === 'youtube' && (
+          <div className="mt-8 space-y-6 animate-in fade-in duration-300">
+            <div className="p-8 rounded-3xl bg-slate-900/80 border border-white/10 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-red-600/5 blur-3xl" />
+              <Youtube className="w-16 h-16 text-red-500 mx-auto mb-4 animate-pulse" />
+              <h3 className="text-xl font-black text-white mb-2">Live YouTube Streamer</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto mb-6">
+                Paste any YouTube video link or ID to stream and sync playback inside the room.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
+                <input
+                  type="text"
+                  placeholder="Paste YouTube link here..."
+                  value={inputUrl}
+                  onChange={(e) => setInputUrl(e.target.value)}
+                  className="flex-1 bg-black/60 border border-white/15 rounded-2xl py-3.5 px-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-red-500 font-mono transition-all"
+                />
+                <button
+                  onClick={() => {
+                    if (inputUrl.trim()) {
+                      onSelectMedia({ type: 'youtube', url: inputUrl, title: 'YouTube Video' });
+                    }
+                  }}
+                  className="px-8 py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-600/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>Play</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
-
-      <nav className="media-mobile-nav" aria-label={isArabic ? 'التنقل' : 'Navigation'}>
-        <button type="button" onClick={onOpenHome}><Home size={19} /><span>{isArabic ? 'الرئيسية' : 'Home'}</span></button>
-        <button className="is-current" type="button" aria-current="page"><Search size={19} /><span>{isArabic ? 'بحث' : 'Search'}</span></button>
-        <button type="button" onClick={onOpenRoom}><UsersRound size={19} /><span>{isArabic ? 'مشاهدة' : 'Watch'}</span></button>
-        <button type="button" onClick={onOpenProfile}><Heart size={19} /><span>{isArabic ? 'مساحتي' : 'My space'}</span></button>
-      </nav>
-    </section>
-  )
+    </div>
+  );
 }
-
-export default MediaSearchHub
