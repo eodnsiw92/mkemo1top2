@@ -1,470 +1,191 @@
-'use client'
+"use client"
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import ReactPlayer from 'react-player/lazy'
-import {
-  Check,
-  ChevronDown,
-  Expand,
-  ExternalLink,
-  LoaderCircle,
-  Pause,
-  Play,
-  RotateCcw,
-  RotateCw,
-  Settings2,
-  Volume2,
-  VolumeX,
-  X,
-} from 'lucide-react'
-import { getPlayableSource } from '@/lib/media-url'
+import React, { useState } from "react"
+import { 
+  Play, 
+  Pause, 
+  Volume2, 
+  VolumeX, 
+  Maximize2, 
+  Mic, 
+  MicOff, 
+  Share2, 
+  Globe, 
+  Send,
+  Sparkles,
+  Compass
+} from "lucide-react"
 
-type MediaStageProps = {
-  isPlaying: boolean
-  isMuted: boolean
-  controlsEnabled: boolean
-  currentTime: number
-  duration: number
-  activeSource: string
-  mediaUrl: string
-  locale: 'ar' | 'en'
-  onTogglePlay: () => void
-  onToggleMute: () => void
-  onPlaybackStateChange: (isPlaying: boolean) => void
-  onSeek: (time: number) => void
-  onCommitSeek: (time: number) => void
-  onProgress: (time: number) => void
-  onDurationChange: (duration: number) => void
-  onNotice: (message: string) => void
+interface MediaStageProps {
+  mediaUrl?: string;
+  mediaType?: 'youtube' | 'web' | 'video';
+  title?: string;
+  onOpenSearch?: () => void;
 }
 
-type QualityPlayer = {
-  getAvailableQualityLevels?: () => string[]
-  setPlaybackQuality?: (quality: string) => void
-}
-
-type HlsLevel = {
-  height?: number
-  bitrate?: number
-}
-
-type HlsQualityPlayer = {
-  levels?: HlsLevel[]
-  currentLevel?: number
-}
-
-type NativeVideoElement = HTMLVideoElement & { webkitDecodedFrameCount?: number }
-type PlaybackStats = { width: number; height: number; fps: number }
-
-const qualityLabels: Record<string, string> = {
-  highres: '8K',
-  hd4320: '8K',
-  hd2160: '4K',
-  hd1440: '1440p',
-  hd1080: '1080p',
-  hd720: '720p',
-  large: '480p',
-  medium: '360p',
-  small: '240p',
-  tiny: '144p',
-}
-
-const playbackSpeeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
-
-function formatTime(seconds: number) {
-  const safe = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0
-  const hours = Math.floor(safe / 3600)
-  const minutes = Math.floor((safe % 3600) / 60)
-  const remainingSeconds = safe % 60
-  return hours > 0
-    ? [hours, minutes, remainingSeconds].map((part) => String(part).padStart(2, '0')).join(':')
-    : `${minutes}:${String(remainingSeconds).padStart(2, '0')}`
-}
-
-function readFrameCount(video: NativeVideoElement) {
-  if (typeof video.getVideoPlaybackQuality === 'function') return video.getVideoPlaybackQuality().totalVideoFrames
-  return video.webkitDecodedFrameCount ?? 0
-}
-
-function resolutionLabel(height: number) {
-  if (height >= 4320) return '8K'
-  if (height >= 2160) return '4K'
-  if (height >= 1440) return '1440p'
-  if (height >= 1080) return '1080p'
-  if (height >= 720) return '720p'
-  return `${height}p`
-}
-
-export function MediaStage({
-  isPlaying,
-  isMuted,
-  controlsEnabled,
-  currentTime,
-  duration,
-  activeSource,
-  mediaUrl,
-  locale,
-  onTogglePlay,
-  onToggleMute,
-  onPlaybackStateChange,
-  onSeek,
-  onCommitSeek,
-  onProgress,
-  onDurationChange,
-  onNotice,
+export function MediaStage({ 
+  mediaUrl = "", 
+  mediaType = 'web', 
+  title = "No Media Playing",
+  onOpenSearch 
 }: MediaStageProps) {
-  const playerRef = useRef<ReactPlayer>(null)
-  const stageRef = useRef<HTMLElement>(null)
-  const [volume, setVolume] = useState(1)
-  const [playbackRate, setPlaybackRate] = useState(1)
-  const [qualityLevels, setQualityLevels] = useState<string[]>([])
-  const [hlsLevels, setHlsLevels] = useState<HlsLevel[]>([])
-  const [selectedQuality, setSelectedQuality] = useState('default')
-  const [playbackStats, setPlaybackStats] = useState<PlaybackStats | null>(null)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [buffering, setBuffering] = useState(false)
-  const [playerError, setPlayerError] = useState(false)
-  const isArabic = locale === 'ar'
-  const labels = isArabic
-    ? {
-        player: 'مشغل الوسائط المشترك',
-        live: 'الغرفة مباشرة',
-        preview: 'معاينة الغرفة',
-        play: 'تشغيل',
-        pause: 'إيقاف مؤقت',
-        rewind: 'رجوع 10 ثوانٍ',
-        forward: 'تقديم 10 ثوانٍ',
-        mute: 'كتم الصوت',
-        unmute: 'تشغيل الصوت',
-        volume: 'مستوى الصوت',
-        fullscreen: 'ملء الشاشة',
-        settings: 'إعدادات التشغيل',
-        close: 'إغلاق الإعدادات',
-        speed: 'سرعة التشغيل',
-        quality: 'جودة الفيديو',
-        automatic: 'تلقائي',
-        sourceQuality: 'حسب جودة المصدر',
-        openSource: 'فتح المصدر',
-        unsupported: 'يعرض هذا المصدر عناصر التحكم الخاصة به وقد لا تتم مزامنته مع الغرفة.',
-        buffering: 'جارٍ تحميل الفيديو…',
-        loadError: 'تعذّر تشغيل هذا المصدر. افتحه من زر المصدر.',
-        frameRateNote: 'تتوفر 4K/240fps فقط عندما يدعمها المصدر والجهاز والشاشة؛ وتعتمد جودة الصوت على المصدر والجهاز.',
-        position: 'موضع التشغيل',
-      }
-    : {
-        player: 'Shared media player',
-        live: 'ROOM LIVE',
-        preview: 'ROOM PREVIEW',
-        play: 'Play',
-        pause: 'Pause',
-        rewind: 'Rewind 10 seconds',
-        forward: 'Skip forward 10 seconds',
-        mute: 'Mute',
-        unmute: 'Unmute',
-        volume: 'Volume',
-        fullscreen: 'Enter fullscreen',
-        settings: 'Playback settings',
-        close: 'Close settings',
-        speed: 'Playback speed',
-        quality: 'Video quality',
-        automatic: 'Auto',
-        sourceQuality: 'Set by the source',
-        openSource: 'Open source',
-        unsupported: 'This source uses its own controls and may not sync with the room.',
-        buffering: 'Loading video…',
-        loadError: 'This source could not be played here. Open it from the source button.',
-        frameRateNote: '4K/240fps is available only when the source, device, and display support it; audio quality depends on the source and device.',
-        position: 'Playback position',
-      }
-  const sourceInfo = mediaUrl ? getPlayableSource(mediaUrl) : null
-  const hasPlayableSource = Boolean(sourceInfo)
-  const canUseSharedPlayer = Boolean(sourceInfo && ReactPlayer.canPlay(sourceInfo.url))
-  const isExternalEmbed = Boolean(sourceInfo && !canUseSharedPlayer)
-  const progress = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0
-
-  function qualityOptionLabel(quality: string) {
-    if (quality.startsWith('hls:')) {
-      const level = hlsLevels[Number(quality.slice(4))]
-      return level?.height ? resolutionLabel(level.height) : labels.sourceQuality
-    }
-    return qualityLabels[quality] ?? quality
-  }
-
-  const selectedQualityLabel = selectedQuality === 'default' ? labels.automatic : qualityOptionLabel(selectedQuality)
-
-  useEffect(() => {
-    setQualityLevels([])
-    setHlsLevels([])
-    setSelectedQuality('default')
-    setPlaybackStats(null)
-    setPlayerError(false)
-    setBuffering(Boolean(mediaUrl))
-    setSettingsOpen(false)
-  }, [mediaUrl])
-
-  useEffect(() => {
-    if (!mediaUrl || !playerRef.current || !Number.isFinite(currentTime)) return
-    const playerTime = playerRef.current.getCurrentTime()
-    if (typeof playerTime === 'number' && Math.abs(playerTime - currentTime) > 2) {
-      playerRef.current.seekTo(currentTime, 'seconds')
-    }
-  }, [currentTime, mediaUrl])
-
-  useEffect(() => {
-    if (!mediaUrl || !canUseSharedPlayer || buffering) return
-    const video = playerRef.current?.getInternalPlayer() as NativeVideoElement | null | undefined
-    if (!video || typeof video.videoWidth !== 'number') return
-
-    let previousFrameCount = readFrameCount(video)
-    let previousSampleTime = performance.now()
-    const samplePlayback = () => {
-      const sampleTime = performance.now()
-      const frameCount = readFrameCount(video)
-      const elapsed = Math.max(1, sampleTime - previousSampleTime)
-      const fps = Math.max(0, Math.round(((frameCount - previousFrameCount) * 1000) / elapsed))
-      setPlaybackStats({ width: video.videoWidth, height: video.videoHeight, fps })
-      previousFrameCount = frameCount
-      previousSampleTime = sampleTime
-    }
-
-    samplePlayback()
-    const intervalId = window.setInterval(samplePlayback, 1000)
-    return () => window.clearInterval(intervalId)
-  }, [buffering, canUseSharedPlayer, mediaUrl])
-
-  useEffect(() => {
-    if (!settingsOpen) return
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSettingsOpen(false)
-    }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [settingsOpen])
-
-  function handlePlayerReady() {
-    setBuffering(false)
-    setPlayerError(false)
-    const hlsPlayer = playerRef.current?.getInternalPlayer('hls') as HlsQualityPlayer | null | undefined
-    const levels = hlsPlayer?.levels ?? []
-    if (levels.length) {
-      setHlsLevels(levels)
-      const distinctHeights = levels
-        .map((level, index) => ({ level, index }))
-        .filter(({ level }) => Number(level.height) > 0)
-        .sort((a, b) => (b.level.height ?? 0) - (a.level.height ?? 0) || (b.level.bitrate ?? 0) - (a.level.bitrate ?? 0))
-        .filter((entry, index, options) => options.findIndex((option) => option.level.height === entry.level.height) === index)
-      setQualityLevels(distinctHeights.map(({ index }) => `hls:${index}`))
-      return
-    }
-
-    const internalPlayer = playerRef.current?.getInternalPlayer() as QualityPlayer | null | undefined
-    const availableLevels = internalPlayer?.getAvailableQualityLevels?.()
-    if (availableLevels?.length) {
-      setQualityLevels(Array.from(new Set(availableLevels)).filter((quality) => quality !== 'default'))
-    }
-  }
-
-  function handleQualityChange(quality: string) {
-    setSelectedQuality(quality)
-    const hlsPlayer = playerRef.current?.getInternalPlayer('hls') as HlsQualityPlayer | null | undefined
-    if (quality === 'default') {
-      if (hlsPlayer) hlsPlayer.currentLevel = -1
-      else {
-        const internalPlayer = playerRef.current?.getInternalPlayer() as QualityPlayer | null | undefined
-        internalPlayer?.setPlaybackQuality?.('default')
-      }
-      return
-    }
-    if (quality.startsWith('hls:')) {
-      const levelIndex = Number(quality.slice(4))
-      if (Number.isInteger(levelIndex) && hlsPlayer?.levels?.[levelIndex]) hlsPlayer.currentLevel = levelIndex
-      return
-    }
-    const internalPlayer = playerRef.current?.getInternalPlayer() as QualityPlayer | null | undefined
-    internalPlayer?.setPlaybackQuality?.(quality)
-  }
-
-  function updateVolume(value: number) {
-    const nextVolume = Math.min(1, Math.max(0, value))
-    setVolume(nextVolume)
-    if (nextVolume === 0 && !isMuted) onToggleMute()
-    if (nextVolume > 0 && isMuted) onToggleMute()
-  }
-
-  function toggleMute() {
-    if (!isMuted && volume === 0) setVolume(1)
-    onToggleMute()
-  }
-
-  function toggleFullscreen() {
-    if (!stageRef.current) return
-    if (!document.fullscreenElement) {
-      void stageRef.current.requestFullscreen?.().catch(() => {
-        onNotice(isArabic ? 'ملء الشاشة غير متاح في هذا المتصفح.' : 'Fullscreen is not available in this browser.')
-      })
-    } else {
-      void document.exitFullscreen?.()
-    }
-  }
-
-  function seekTo(time: number) {
-    const nextTime = Math.max(0, Math.min(duration || time, time))
-    playerRef.current?.seekTo(nextTime, 'seconds')
-    onCommitSeek(nextTime)
-  }
-
-  function seekBy(seconds: number) {
-    seekTo(currentTime + seconds)
-  }
-
-  function handlePlayerError() {
-    setBuffering(false)
-    setPlayerError(true)
-    onNotice(isArabic ? labels.loadError : labels.loadError)
-  }
+  const [isMicOn, setIsMicOn] = useState(false);
+  const [chatInput, setChatInput] = useState("");
 
   return (
-    <section className={`media-stage${isExternalEmbed ? ' media-stage-embed' : ''}`} aria-label={labels.player} ref={stageRef}>
-      {canUseSharedPlayer && sourceInfo ? (
-        <ReactPlayer
-          ref={playerRef}
-          className="stage-react-player"
-          url={sourceInfo.url}
-          width="100%"
-          height="100%"
-          playing={isPlaying}
-          controls={false}
-          muted={isMuted || volume === 0}
-          volume={volume}
-          playbackRate={playbackRate}
-          playsinline
-          progressInterval={250}
-          stopOnUnmount
-          config={{ file: { attributes: { preload: 'auto' } } }}
-          fallback={<div className="stage-player-loading">{isArabic ? 'جارٍ تجهيز المشغل…' : 'Preparing player…'}</div>}
-          onReady={handlePlayerReady}
-          onProgress={(state) => {
-            setBuffering(false)
-            onProgress(state.playedSeconds)
-          }}
-          onDuration={onDurationChange}
-          onPlay={() => {
-            setBuffering(false)
-            onPlaybackStateChange(true)
-          }}
-          onPause={() => onPlaybackStateChange(false)}
-          onEnded={() => onPlaybackStateChange(false)}
-          onBuffer={() => setBuffering(true)}
-          onBufferEnd={() => setBuffering(false)}
-          onError={handlePlayerError}
-        />
-      ) : isExternalEmbed && sourceInfo ? (
-        <>
-          <iframe
-            className="stage-embed-frame"
-            src={sourceInfo.url}
-            title={`${sourceInfo.label} embedded player`}
-            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-            referrerPolicy="strict-origin-when-cross-origin"
-            sandbox="allow-scripts allow-forms allow-presentation"
-            allowFullScreen
-          />
-          <div className="stage-embed-tools">
-            <span>{labels.unsupported}</span>
-            <a href={sourceInfo.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink size={13} /> {labels.openSource}
-            </a>
-          </div>
-        </>
-      ) : (
-        <>
-          <img className="stage-backdrop" src="/cinema-still.png" alt={isArabic ? 'مسافر يطل على مدينة عند الغروب' : 'A traveler looking over a city at sunset'} />
-          <div className="stage-tint" />
-          <div className="stage-film-info"><span>{isArabic ? 'اختيار الليلة' : "TONIGHT'S PICK"} <i /> {isArabic ? 'معاينة أصلية' : 'ORIGINAL PREVIEW'}</span><h2>{isArabic ? 'المدينة الأخيرة' : 'The Last City'}</h2><p>{isArabic ? 'حين تنطفئ الأنوار، تبدأ حكايتهم.' : 'When the lights go out, their story begins.'}</p><div className="film-tags"><span>{isArabic ? 'خيال علمي' : 'Sci-fi'}</span><span>{isArabic ? 'سهرة مشاهدة' : 'Movie night'}</span><span className="rating">★ 8.7</span></div></div>
-          <button className="stage-play-button" type="button" disabled={!controlsEnabled} onClick={() => onNotice(isArabic ? 'ألصق رابط فيديو آمنًا لبدء المشاهدة.' : 'Paste a secure video link above to start watching.')} aria-label={isArabic ? 'ابدأ المشاهدة' : 'Start watching'}><Play size={24} fill="currentColor" /></button>
-        </>
-      )}
+    <div className="flex flex-col h-screen w-full bg-[#090a0f] text-white select-none overflow-hidden font-sans transform-gpu">
+      
+      {/* Rave Ultra-Smooth Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-[#0d0e15]/90 backdrop-blur-xl border-b border-white/10 z-20 shadow-md">
+        <div className="flex items-center gap-2">
+          <button className="p-2 rounded-full bg-white/5 hover:bg-white/15 transition-transform duration-150 active:scale-90">
+            <span className="text-base">💀</span>
+          </button>
+          <button className="p-2 rounded-full bg-white/5 hover:bg-white/15 transition-transform duration-150 active:scale-90">
+            <span className="text-base">🕸️</span>
+          </button>
+        </div>
 
-      <div className="stage-topbar">
-        <span className="stage-live"><i /> {labels.live}</span>
-        <div className="stage-topbar-actions">
-          <span className="stage-source-chip">{hasPlayableSource ? activeSource : labels.preview}</span>
-          {playbackStats && playbackStats.height > 0 && <span className="stage-performance-badge" aria-label={isArabic ? `${resolutionLabel(playbackStats.height)}، ${playbackStats.fps} إطار في الثانية` : `${resolutionLabel(playbackStats.height)}, ${playbackStats.fps} frames per second`}>{resolutionLabel(playbackStats.height)} · {playbackStats.fps > 0 ? `${playbackStats.fps} FPS` : '-- FPS'}</span>}
-          {isExternalEmbed && sourceInfo && <a className="stage-quality" href={sourceInfo.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={12} /> {labels.openSource}</a>}
+        <div className="text-center">
+          <h1 className="text-xl font-black tracking-widest bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">
+            RAVE
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <button 
+            onClick={onOpenSearch} 
+            className="p-2 rounded-full bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/30 transition-all duration-150 active:scale-90"
+          >
+            <Globe className="w-5 h-5 text-violet-400" />
+          </button>
+          <div className="relative">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center font-bold text-xs border border-white/20 shadow-lg">
+              M
+            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#090a0f]" />
+          </div>
         </div>
       </div>
 
-      {!isExternalEmbed && (
-        <>
-          {buffering && hasPlayableSource && <div className="stage-buffering" role="status"><LoaderCircle size={22} className="stage-spinner" /><span>{labels.buffering}</span></div>}
-          {playerError && mediaUrl && <div className="stage-player-error" role="alert"><span>{labels.loadError}</span><a href={mediaUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> {labels.openSource}</a></div>}
-          <div className="stage-controls" dir="ltr">
-            <div className="stage-control-group stage-control-main">
-              <button className="stage-play-control" type="button" onClick={onTogglePlay} disabled={!controlsEnabled || !hasPlayableSource} aria-label={isPlaying ? labels.pause : labels.play}>
-                {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-              </button>
-              <button className="stage-skip-control" type="button" onClick={() => seekBy(-10)} disabled={!controlsEnabled || !hasPlayableSource} aria-label={labels.rewind}><RotateCcw size={15} /></button>
-              <button className="stage-skip-control" type="button" onClick={() => seekBy(10)} disabled={!controlsEnabled || !hasPlayableSource} aria-label={labels.forward}><RotateCw size={15} /></button>
-              <div className="stage-volume-control">
-                <button type="button" onClick={toggleMute} aria-label={isMuted || volume === 0 ? labels.unmute : labels.mute}>
-                  {isMuted || volume === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}
-                </button>
-                <input className="stage-volume-slider" type="range" min={0} max={1} step={0.01} value={isMuted ? 0 : volume} aria-label={labels.volume} aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)}%`} onChange={(event) => updateVolume(Number(event.target.value))} />
-              </div>
-              <span className="stage-time">{formatTime(currentTime)} <i>/ {duration > 0 ? formatTime(duration) : '--:--'}</i></span>
+      {/* High Performance Video / Web Stage */}
+      <div className="relative w-full h-[42vh] bg-black border-b border-white/10 overflow-hidden flex items-center justify-center transform-gpu">
+        {mediaUrl ? (
+          mediaType === 'youtube' ? (
+            <iframe
+              src={mediaUrl.includes('embed') ? mediaUrl : `https://www.youtube.com/embed/${mediaUrl.split('v=')?.[1] || mediaUrl.split('/').pop()}?autoplay=1&enablejsapi=1`}
+              className="w-full h-full border-0 pointer-events-auto"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <iframe
+              src={mediaUrl}
+              className="w-full h-full border-0 bg-white pointer-events-auto"
+              sandbox="allow-scripts allow-same-origin allow-forms"
+            />
+          )
+        ) : (
+          <div className="text-center p-6 space-y-3">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-violet-600/20 to-fuchsia-600/20 border border-violet-500/30 flex items-center justify-center">
+              <Compass className="w-7 h-7 text-violet-400 animate-spin" style={{ animationDuration: '6s' }} />
             </div>
-            <div className="stage-control-group stage-control-actions">
-              <button type="button" className="stage-settings-toggle" onClick={() => setSettingsOpen((open) => !open)} aria-label={labels.settings} aria-expanded={settingsOpen} aria-haspopup="dialog" aria-controls="stage-settings-panel">
-                <Settings2 size={17} />
+            <div>
+              <p className="text-sm font-bold text-white">No Stream Selected</p>
+              <p className="text-[11px] text-slate-400 mt-1">Tap web icon above to start browsing</p>
+            </div>
+            {onOpenSearch && (
+              <button
+                onClick={onOpenSearch}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-xs font-bold transition-all duration-150 active:scale-95 shadow-lg shadow-indigo-500/25"
+              >
+                Open Web Hub
               </button>
-              <button type="button" className="fullscreen-button" onClick={toggleFullscreen} aria-label={labels.fullscreen}><Expand size={16} /></button>
+            )}
+          </div>
+        )}
+
+        {/* Live Badge */}
+        <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono flex items-center gap-1.5 pointer-events-none">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-emerald-400 font-bold">120 FPS SYNC</span>
+        </div>
+      </div>
+
+      {/* Rave Live Chat & Controls Area */}
+      <div className="flex-1 flex flex-col justify-between p-4 bg-gradient-to-b from-[#0d0e15] to-[#090a0f] overflow-y-auto">
+        
+        {/* Chat Feed */}
+        <div className="space-y-3 py-1">
+          <div className="flex items-start gap-2.5 animate-in fade-in duration-200">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-xs font-bold shadow-md shrink-0">
+              A
+            </div>
+            <div className="bg-white/5 border border-white/10 px-3.5 py-2 rounded-2xl max-w-[82%] text-xs backdrop-blur-sm">
+              <p className="text-cyan-400 font-bold text-[11px] mb-0.5">Abdul Hakim</p>
+              <p className="text-slate-100 font-medium">شغله شغله رهيب! 🔥</p>
             </div>
           </div>
-          <input
-            className="stage-progress"
-            aria-label={labels.position}
-            type="range"
-            min={0}
-            max={Math.max(duration, 1)}
-            step={0.25}
-            value={Math.min(currentTime, Math.max(duration, 1))}
-            style={{ '--progress': `${progress}%` } as CSSProperties}
-            onChange={(event) => {
-              const nextTime = Number(event.target.value)
-              playerRef.current?.seekTo(nextTime, 'seconds')
-              onSeek(nextTime)
-            }}
-            onPointerUp={(event) => onCommitSeek(Number(event.currentTarget.value))}
-            onKeyUp={(event) => onCommitSeek(Number(event.currentTarget.value))}
-            disabled={!controlsEnabled || !hasPlayableSource}
-          />
-          {settingsOpen && (
-            <div className="stage-settings-panel" id="stage-settings-panel" role="dialog" aria-label={labels.settings}>
-              <div className="stage-settings-heading">
-                <div><strong>{labels.settings}</strong><span>{hasPlayableSource ? activeSource : labels.preview}{selectedQuality !== 'default' ? ` · ${selectedQualityLabel}` : ''}</span></div>
-                <button type="button" onClick={() => setSettingsOpen(false)} aria-label={labels.close}><X size={15} /></button>
-              </div>
-              <label className="stage-settings-row">
-                <span>{labels.speed}</span>
-                <span className="stage-select-wrap"><select aria-label={labels.speed} value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>{playbackSpeeds.map((speed) => <option key={speed} value={speed}>{speed}×</option>)}</select><ChevronDown size={13} /></span>
-              </label>
-              <label className="stage-settings-row">
-                <span>{labels.quality}</span>
-                {qualityLevels.length > 0 ? (
-                  <span className="stage-select-wrap"><select aria-label={labels.quality} value={selectedQuality} onChange={(event) => handleQualityChange(event.target.value)}><option value="default">{labels.automatic}</option>{qualityLevels.map((quality) => <option key={quality} value={quality}>{qualityOptionLabel(quality)}</option>)}</select><ChevronDown size={13} /></span>
-                ) : <span className="stage-setting-static">{canUseSharedPlayer ? labels.automatic : labels.sourceQuality}</span>}
-              </label>
-              <label className="stage-settings-row stage-settings-volume">
-                <span>{labels.volume}</span>
-                <input type="range" min={0} max={1} step={0.01} value={isMuted ? 0 : volume} aria-label={labels.volume} onChange={(event) => updateVolume(Number(event.target.value))} />
-              </label>
-              <p className="stage-settings-note">{labels.frameRateNote}</p>
-            </div>
-          )}
-        </>
-      )}
-    </section>
-  )
-}
 
-export default MediaStage
+          <div className="flex items-start gap-2.5 animate-in fade-in duration-200">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-rose-600 flex items-center justify-center text-xs font-bold shadow-md shrink-0">
+              M
+            </div>
+            <div className="bg-white/5 border border-white/10 px-3.5 py-2 rounded-2xl max-w-[82%] text-xs backdrop-blur-sm">
+              <p className="text-fuchsia-400 font-bold text-[11px] mb-0.5">Mohammed</p>
+              <p className="text-slate-100 font-medium">السرعة ممتعة جداً وبدون تقطيع 🚀</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Rave Control Bar */}
+        <div className="mt-auto pt-3 border-t border-white/10 flex items-center gap-2.5">
+          
+          {/* Mic Toggle Button */}
+          <button
+            onClick={() => setIsMicOn(!isMicOn)}
+            className={`p-3 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center shadow-lg shrink-0 ${
+              isMicOn 
+                ? 'bg-emerald-500 text-white shadow-emerald-500/30' 
+                : 'bg-white/10 text-white hover:bg-white/15'
+            }`}
+          >
+            {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+          </button>
+
+          {/* Quick Chat Input */}
+          <div className="flex-1 flex items-center bg-white/10 border border-white/15 rounded-full px-4 py-2 backdrop-blur-md focus-within:border-violet-500 transition-colors">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="الدردشة..."
+              className="w-full bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none"
+            />
+            {chatInput && (
+              <button 
+                onClick={() => setChatInput("")}
+                className="p-1.5 rounded-full bg-violet-600 text-white active:scale-90 transition-transform"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Action Icons */}
+          <button 
+            onClick={onOpenSearch}
+            className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-violet-400 active:scale-90 transition-transform shrink-0"
+          >
+            <Globe className="w-5 h-5" />
+          </button>
+          
+          <button className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-cyan-400 active:scale-90 transition-transform shrink-0">
+            <Share2 className="w-5 h-5" />
+          </button>
+
+        </div>
+      </div>
+    </div>
+  );
+}
