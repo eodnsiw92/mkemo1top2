@@ -44,7 +44,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: vuln-latest # or ubuntu-latest
     needs: build
     runs-on: ubuntu-latest
     steps:
