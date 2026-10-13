@@ -157,6 +157,23 @@ export default function Home() {
       {isRegisterOpen && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="bg-[#0e131f] border border-gray-800 w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
-            <button onClick={() => setIsRegisterOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white bg-[#151c2e] border border-gray-800 w-8 h-8 rounded-full flex items-center justify-center text-xs">✕</button>
+            <button 
+              onClick={() => setIsRegisterOpen(false)} 
+              className="absolute top-4 right-4 text-gray-400 hover:text-white bg-[#151c2e] border border-gray-800 w-8 h-8 rounded-full flex items-center justify-center text-xs transition hover:bg-gray-800"
+            >
+              ✕
+            </button>
             
-            <h2 className="text-base font-bold text
+            <h2 className="text-base font-bold text-center mb-5 text-white">Create Prime Video Account</h2>
+            <form onSubmit={submitPrimeRegister} className="space-y-3.5">
+              <input type="text" required value={regName} onChange={e => setRegName(e.target.value)} placeholder="Full Name" className="w-full bg-[#151c2e] border border-gray-800 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#00A8E1]" />
+              <input type="email" required value={regEmail} onChange={e => setRegEmail(e.target.value)} placeholder="Email Address" className="w-full bg-[#151c2e] border border-gray-800 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#00A8E1]" />
+              <input type="password" required minLength={6} value={regPass} onChange={e => setRegPass(e.target.value)} placeholder="Password" className="w-full bg-[#151c2e] border border-gray-800 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#00A8E1]" />
+              <button type="submit" className="w-full bg-[#00A8E1] hover:bg-[#0091c4] text-white py-3 rounded-2xl font-bold text-xs transition shadow-lg shadow-sky-500/20 mt-2">Register Account</button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
