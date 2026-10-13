@@ -26,10 +26,10 @@ export default function Home() {
     <main className="min-h-screen bg-[#040508] text-white flex flex-col justify-between font-sans relative overflow-hidden selection:bg-pink-500 selection:text-white">
       
       {/* Dynamic Background Glow FX */}
-      <div className="absolute top-[-15%] left-[-10%] w-[600px] h-[600px] bg-pink-600/10 rounded-full blur-[150px] pointer-events-none animate-pulse" />
-      <div className="absolute bottom-[-15%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none animate-pulse duration-1000" />
+      <div className="absolute top-[-15%] left-[-10%] w-[700px] h-[700px] bg-pink-600/10 rounded-full blur-[160px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-[-15%] right-[-10%] w-[700px] h-[700px] bg-purple-600/10 rounded-full blur-[160px] pointer-events-none animate-pulse duration-1000" />
 
-      {/* Top Navigation Bar - Minimalist Rave UI */}
+      {/* Top Navigation Bar */}
       <header className="w-full bg-[#0a0c14]/70 border-b border-white/10 backdrop-blur-2xl px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-2xl">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 group cursor-pointer">
@@ -49,13 +49,13 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Screen Player Section */}
-      <section className="w-full max-w-6xl mx-auto flex-1 flex flex-col justify-center items-center p-4 md:p-6 my-auto z-10">
+      {/* Main Screen Player Section - Expanded Size */}
+      <section className="w-full max-w-7xl mx-auto flex-1 flex flex-col justify-center items-center px-4 py-6 my-auto z-10">
         <div 
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          className={`w-full aspect-video bg-[#090b12]/90 rounded-3xl overflow-hidden border transition-all duration-500 relative flex items-center justify-center shadow-2xl ${
-            isHovered ? 'border-pink-500/50 shadow-[0_0_60px_rgba(236,72,153,0.2)]' : 'border-white/10 shadow-black'
+          className={`w-full h-[75vh] min-h-[500px] bg-[#090b12]/95 rounded-3xl overflow-hidden border transition-all duration-500 relative flex items-center justify-center shadow-2xl ${
+            isHovered ? 'border-pink-500/50 shadow-[0_0_70px_rgba(236,72,153,0.25)]' : 'border-white/10 shadow-black'
           }`}
         >
           {activeMediaUrl ? (
@@ -67,18 +67,18 @@ export default function Home() {
             />
           ) : (
             <div className="text-center space-y-6 p-6">
-              <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+              <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
                 <div className="absolute inset-0 bg-pink-500/20 rounded-full blur-2xl animate-pulse" />
-                <div className="w-20 h-20 bg-gradient-to-br from-zinc-800 to-zinc-950 border border-white/15 rounded-full flex items-center justify-center text-pink-500 shadow-2xl transition-transform duration-300 hover:scale-110 cursor-pointer">
-                  <svg className="w-10 h-10 ml-1 drop-shadow-[0_0_12px_#ec4899]" fill="currentColor" viewBox="0 0 24 24">
+                <div className="w-24 h-24 bg-gradient-to-br from-zinc-800 to-zinc-950 border border-white/15 rounded-full flex items-center justify-center text-pink-500 shadow-2xl transition-transform duration-300 hover:scale-110 cursor-pointer">
+                  <svg className="w-12 h-12 ml-1 drop-shadow-[0_0_12px_#ec4899]" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <h2 className="text-2xl font-black text-white tracking-wider uppercase italic">Ready to Stream</h2>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-black text-white tracking-wider uppercase italic">Ready to Stream</h2>
                 <p className="text-zinc-500 text-xs font-semibold uppercase tracking-widest">
-                  Paste video URL below to start playback
+                  Paste video URL below to start playback in large cinematic view
                 </p>
               </div>
             </div>
@@ -87,19 +87,19 @@ export default function Home() {
       </section>
 
       {/* Control Input Footer */}
-      <footer className="w-full max-w-4xl mx-auto p-4 md:p-6 mb-3 z-10">
-        <form onSubmit={handlePlayMedia} className="flex gap-2 bg-[#090b12]/90 p-2.5 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-2xl focus-within:border-pink-500/60 transition duration-300">
+      <footer className="w-full max-w-5xl mx-auto px-4 py-4 mb-3 z-10">
+        <form onSubmit={handlePlayMedia} className="flex gap-3 bg-[#090b12]/95 p-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-2xl focus-within:border-pink-500/60 transition duration-300">
           <input
             type="url"
             value={inputUrl}
             onChange={(e) => setInputUrl(e.target.value)}
             placeholder="Paste media link here (YouTube, Direct Stream, MP4...)"
-            className="flex-1 bg-transparent px-4 py-3 text-white placeholder-zinc-600 focus:outline-none text-sm font-medium tracking-wide"
+            className="flex-1 bg-transparent px-4 py-3.5 text-white placeholder-zinc-600 focus:outline-none text-sm font-medium tracking-wide"
             required
           />
           <button
             type="submit"
-            className="bg-white hover:bg-pink-500 hover:text-white text-black font-black px-8 py-3.5 rounded-xl transition-all duration-300 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg cursor-pointer"
+            className="bg-white hover:bg-pink-500 hover:text-white text-black font-black px-10 py-3.5 rounded-xl transition-all duration-300 active:scale-95 text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg cursor-pointer"
           >
             <span>Play</span>
             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
