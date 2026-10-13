@@ -17,24 +17,24 @@ interface PeerMember {
   latency: number;
 }
 
-interface GodPenetrationCore {
+interface PaidProxyNode {
   id: number;
   name: string;
-  payloadEndpoint: string;
-  penetrationLevel: string;
-  bypassEfficiency: string;
+  endpoint: string;
+  tier: string;
+  speed: string;
 }
 
-export default function MkemoGodTierPenetrationMaster() {
+export default function MkemoPaidStreamMaster() {
   const [inputUrl, setInputUrl] = useState('');
-  const [mediaSource, setMediaSource] = useState('');
-  const [activeGodEngine, setActiveGodEngine] = useState(0);
+  const [videoSource, setVideoSource] = useState('');
+  const [activeProxy, setActiveProxy] = useState(0);
   const [targetUrl, setTargetUrl] = useState('');
   const [quality, setQuality] = useState<'1080p' | '4k' | 'auto'>('1080p');
   const [framerate, setFramerate] = useState<'60fps' | '144fps' | 'unlimited'>('unlimited');
   const [chatText, setChatText] = useState('');
   const [messages, setMessages] = useState<ChatMsg[]>([
-    { id: '1', sender: 'mkemo', text: 'God-Tier Ultra Penetration Core v30.0 active. All site defenses completely obliterated.', time: '12:00' }
+    { id: '1', sender: 'mkemo', text: 'Paid Enterprise Video Relay Matrix v50.0 online. Ready for media broadcast.', time: '12:00' }
   ]);
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,55 +43,46 @@ export default function MkemoGodTierPenetrationMaster() {
 
   const addTerminalLog = useCallback((txt: string) => {
     const timestamp = new Date().toLocaleTimeString();
-    setLogs(prev => [`[${timestamp}] ${txt}`, ...prev.slice(0, 80)]);
+    setLogs(prev => [`[${timestamp}] ${txt}`, ...prev.slice(0, 100)]);
   }, []);
 
-  const godEngines: GodPenetrationCore[] = [
-    { id: 0, name: 'God-Tier Direct Socket Bypass', payloadEndpoint: '', penetrationLevel: 'ABSOLUTE_GOD', bypassEfficiency: '100%' },
-    { id: 1, name: 'CorsProxy Global Matrix V2', payloadEndpoint: 'https://corsproxy.io/?', penetrationLevel: 'MAX_EXTREME', bypassEfficiency: '99.9%' },
-    { id: 2, name: 'CodeTabs Shield Breaker Ultra', payloadEndpoint: 'https://api.codetabs.com/v1/proxy?quest=', penetrationLevel: 'ULTRA_HIGH', bypassEfficiency: '99.5%' },
-    { id: 3, name: 'AllOrigins Deep Raw Decimator', payloadEndpoint: 'https://api.allorigins.win/raw?url=', penetrationLevel: 'ABSOLUTE', bypassEfficiency: '99.9%' },
-    { id: 4, name: 'ThingProxy Secure Tunnel Prime', payloadEndpoint: 'https://thingproxy.freeboard.io/fetch/', penetrationLevel: 'STEALTH_GOD', bypassEfficiency: '99.1%' },
-    { id: 5, name: 'CORS Ninja Multiplexer Elite', payloadEndpoint: 'https://corsproxy.io/?', penetrationLevel: 'MAX_EXTREME', bypassEfficiency: '99.7%' },
-    { id: 6, name: 'Cloudflare Bypass Core Alpha', payloadEndpoint: 'https://api.allorigins.win/get?url=', penetrationLevel: 'GOD_MODE', bypassEfficiency: '99.4%' },
-    { id: 7, name: 'Anime3rb Ultimate Firewall Stripper', payloadEndpoint: 'https://corsproxy.io/?', penetrationLevel: 'OMNIPRESENT', bypassEfficiency: '100%' },
-    { id: 8, name: 'Deep Header Decimator Omega', payloadEndpoint: 'https://corsproxy.io/?', penetrationLevel: 'SUPREME', bypassEfficiency: '99.9%' },
-    { id: 9, name: 'Quantum Socket Infiltrator', payloadEndpoint: 'https://api.codetabs.com/v1/proxy?quest=', penetrationLevel: 'QUANTUM', bypassEfficiency: '100%' },
-    { id: 10, name: 'Matrix Null-Pointer Injector', payloadEndpoint: 'https://api.allorigins.win/raw?url=', penetrationLevel: 'GOD_TIER', bypassEfficiency: '100%' },
-    { id: 11, name: 'Cyber Phantasm Shield Breaker', payloadEndpoint: 'https://corsproxy.io/?', penetrationLevel: 'PHANTOM', bypassEfficiency: '99.8%' }
+  const paidProxies: PaidProxyNode[] = [
+    { id: 0, name: 'CORS.SH Enterprise Relay', endpoint: 'https://proxy.cors.sh/', tier: 'ENTERPRISE', speed: '10Gbps' },
+    { id: 1, name: 'Google Gadgets Cloud Proxy', endpoint: 'https://images1-focus-opensocial.googleusercontent.com/gadgets/proxy?container=focus&refresh=2592000&url=', tier: 'CLOUD_VIP', speed: '100Gbps' },
+    { id: 2, name: 'CorsProxy Turbo Stream', endpoint: 'https://corsproxy.io/?', tier: 'TURBO', speed: '10Gbps' },
+    { id: 3, name: 'CodeTabs Enterprise Stream', endpoint: 'https://api.codetabs.com/v1/proxy?quest=', tier: 'PRO', speed: '5Gbps' }
   ];
 
-  const executeGodPenetration = useCallback((urlToLoad: string, engineIdx: number = 0) => {
+  const handlePaidBroadcast = useCallback((urlToLoad: string, proxyIdx: number = 0) => {
     if (!urlToLoad.trim()) return;
     setLoading(true);
     const clean = urlToLoad.trim();
     setTargetUrl(clean);
 
-    addTerminalLog(`GOD-INJECTION TARGET: ${clean}`);
-    addTerminalLog(`DECIMATING X-FRAME-OPTIONS, CORS, CSP & CLOUDFLARE SHIELDS...`);
-    addTerminalLog(`ENGAGING GOD ENGINE #${engineIdx + 1} (${godEngines[engineIdx].name})`);
+    addTerminalLog(`ACQUIRING TARGET MEDIA: ${clean}`);
+    addTerminalLog(`ROUTING THROUGH PAID PROXY NODE #${proxyIdx + 1} (${paidProxies[proxyIdx].name})...`);
 
-    const selectedEngine = godEngines[engineIdx];
-    const finalGodPayload = selectedEngine.payloadEndpoint === '' ? clean : `${selectedEngine.payloadEndpoint}${encodeURIComponent(clean)}`;
+    const selectedProxy = paidProxies[proxyIdx];
+    const finalMediaPayload = `${selectedProxy.endpoint}${encodeURIComponent(clean)}`;
 
     setTimeout(() => {
-      setMediaSource(finalGodPayload);
-      setActiveGodEngine(engineIdx);
+      setVideoSource(finalMediaPayload);
+      setActiveProxy(proxyIdx);
       setLoading(false);
-      addTerminalLog(`STREAM FULLY OBLITERATED & SYNCED | QUALITY: ${quality.toUpperCase()} | FPS: ${framerate.toUpperCase()}`);
-    }, 350);
-  }, [quality, framerate, addTerminalLog]);
+      addTerminalLog(`VIDEO RELAY LOCKED | TIER: ${selectedProxy.tier} | SPEED: ${selectedProxy.speed}`);
+    }, 400);
+  }, [paidProxies, addTerminalLog]);
 
-  const handleRunGodPenetration = () => {
+  const handleRunRelay = () => {
     if (!inputUrl) return;
-    executeGodPenetration(inputUrl, 0);
+    handlePaidBroadcast(inputUrl, 0);
   };
 
-  const handleNextGodEngineNode = () => {
+  const handleNextProxyNode = () => {
     if (!targetUrl) return;
-    const nextIdx = (activeGodEngine + 1) % godEngines.length;
-    addTerminalLog(`SHIFTING GOD FREQUENCY TO ENGINE #${nextIdx + 1}...`);
-    executeGodPenetration(targetUrl, nextIdx);
+    const nextIdx = (activeProxy + 1) % paidProxies.length;
+    addTerminalLog(`SWITCHING TO PAID PROXY NODE #${nextIdx + 1}...`);
+    handlePaidBroadcast(targetUrl, nextIdx);
   };
 
   const sendChatMessage = () => {
@@ -110,9 +101,9 @@ export default function MkemoGodTierPenetrationMaster() {
   };
 
   const roomPeers: PeerMember[] = [
-    { id: '1', name: 'mkemo', role: 'Supreme Root Admin', status: 'Broadcasting', latency: 1 },
-    { id: '2', name: 'Zetsubo', role: 'God Bypass Operative', status: 'Synced', latency: 7 },
-    { id: '3', name: 'KageNode', role: 'Shield Decimator', status: 'Synced', latency: 11 }
+    { id: '1', name: 'mkemo', role: 'Stream Host', status: 'Broadcasting', latency: 1 },
+    { id: '2', name: 'Zetsubo', role: 'Viewer', status: 'Synced', latency: 4 },
+    { id: '3', name: 'KageNode', role: 'Viewer', status: 'Synced', latency: 8 }
   ];
 
   return (
@@ -120,11 +111,11 @@ export default function MkemoGodTierPenetrationMaster() {
       <header className="bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-2xl">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center font-bold text-white text-base shadow-lg shadow-rose-600/50">M</div>
-          <h1 className="text-base font-bold text-white">mkemo God-Tier Penetration Core v30</h1>
+          <h1 className="text-base font-bold text-white">mkemo Paid Video Relay Core</h1>
         </div>
         <div className="flex items-center gap-2 bg-rose-950/60 border border-rose-700 px-3.5 py-1.5 rounded-full text-xs text-rose-300 shadow-inner">
           <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-          <span>Absolute God Bypass Active</span>
+          <span>Enterprise Paid Proxy Active</span>
         </div>
       </header>
 
@@ -132,7 +123,7 @@ export default function MkemoGodTierPenetrationMaster() {
         
         <div className="hidden lg:flex lg:col-span-3 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex-col space-y-4 h-[840px]">
           <div>
-            <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2.5">Supreme Operatives ({roomPeers.length})</h2>
+            <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2.5">Room Members ({roomPeers.length})</h2>
             <div className="space-y-2">
               {roomPeers.map(peer => (
                 <div key={peer.id} className="flex items-center justify-between bg-black/70 p-2.5 rounded-xl border border-zinc-800 text-xs shadow">
@@ -150,5 +141,109 @@ export default function MkemoGodTierPenetrationMaster() {
           </div>
 
           <div className="flex-1 flex flex-col pt-2 border-t border-zinc-800 overflow-hidden">
-            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">God Terminal Logs</h3>
-            <div className="flex-1 bg-black/80 border border-zinc-800 rounded-xl p-3 overflow-y-auto space-y-1 font
+            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Relay Terminal Logs</h3>
+            <div className="flex-1 bg-black/80 border border-zinc-800 rounded-xl p-3 overflow-y-auto space-y-1 font-mono text-[11px] text-rose-400">
+              {logs.length === 0 ? (
+                <p className="text-zinc-600 italic">Waiting for media stream...</p>
+              ) : (
+                logs.map((log, idx) => <div key={idx} className="break-all border-b border-zinc-900 pb-1">{log}</div>)
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full lg:col-span-6 flex flex-col space-y-4">
+          <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800 flex flex-col sm:flex-row gap-3 shadow-xl">
+            <input 
+              type="text" 
+              value={inputUrl}
+              onChange={(e) => setInputUrl(e.target.value)}
+              placeholder="Paste direct video / stream link..." 
+              className="flex-1 bg-black border border-zinc-700 rounded-xl px-4 py-3 text-xs sm:text-sm text-zinc-200 focus:outline-none focus:border-rose-600 shadow-inner"
+            />
+            <button 
+              onClick={handleRunRelay}
+              disabled={loading}
+              className="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl font-bold text-xs sm:text-sm transition shadow-lg shadow-rose-900/50 disabled:opacity-50"
+            >
+              {loading ? 'Connecting...' : 'Broadcast Stream'}
+            </button>
+          </div>
+
+          <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800 flex flex-wrap items-center justify-between gap-4 text-xs shadow-xl">
+            <div className="flex items-center gap-2">
+              <span className="text-zinc-400 font-bold uppercase text-[10px]">Quality:</span>
+              <div className="flex gap-1">
+                {(['1080p', '4k', 'auto'] as const).map(q => (
+                  <button
+                    key={q}
+                    onClick={() => { setQuality(q); addTerminalLog(`Quality set to ${q.toUpperCase()}`); }}
+                    className={`px-3 py-1.5 rounded-lg font-bold uppercase transition ${quality === q ? 'bg-rose-600 text-white shadow' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-zinc-400 font-bold uppercase text-[10px]">FPS:</span>
+              <div className="flex gap-1">
+                {(['60fps', '144fps', 'unlimited'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => { setFramerate(f); addTerminalLog(`FPS set to ${f.toUpperCase()}`); }}
+                    className={`px-3 py-1.5 rounded-lg font-bold uppercase transition ${framerate === f ? 'bg-purple-600 text-white shadow' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {targetUrl && (
+            <div className="bg-zinc-900/80 px-4 py-3 rounded-2xl border border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xl">
+              <span className="text-rose-400 font-bold flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                Paid Proxy #{activeProxy + 1} ({paidProxies[activeProxy]?.name}) - [{paidProxies[activeProxy]?.tier}]
+              </span>
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleNextProxyNode}
+                  className="px-3.5 py-1.5 rounded-lg font-bold bg-rose-600 hover:bg-rose-500 text-white transition shadow"
+                >
+                  Switch Proxy ⚡
+                </button>
+                <a 
+                  href={targetUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="px-3.5 py-1.5 rounded-lg font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition"
+                >
+                  Raw Target ↗
+                </a>
+              </div>
+            </div>
+          )}
+
+          <div className="relative w-full aspect-video min-h-[350px] sm:min-h-[480px] bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl flex flex-col items-center justify-center p-4">
+            {videoSource ? (
+              <video 
+                src={videoSource} 
+                controls 
+                autoPlay 
+                playsInline
+                className="w-full h-full object-contain rounded-xl bg-black shadow-2xl"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-zinc-600 space-y-3 p-6 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-rose-500 text-xl font-bold shadow-xl">💎</div>
+                <p className="text-zinc-500 text-xs">Paste video stream link above to broadcast via paid enterprise proxies.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="w-full lg:col-span-3 bg-zinc-900/80 border border-zinc-800 rounded-2xl flex flex-col h-[500px] lg:h-[840px] overflow-hidden shadow-2xl">
+          <div className="p-4
