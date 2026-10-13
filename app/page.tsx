@@ -31,7 +31,6 @@ export default function MkemoCore() {
   }, []);
 
   const proxyList = [
-    { name: 'PythonAnywhere Core', url: 'https://ubnt72.pythonanywhere.com/proxy?url=' },
     { name: 'AllOrigins Gateway', url: 'https://api.allorigins.win/raw?url=' },
     { name: 'CorsProxy Network', url: 'https://corsproxy.io/?' },
     { name: 'CodeTabs Shield', url: 'https://api.codetabs.com/v1/proxy?quest=' },
@@ -45,7 +44,7 @@ export default function MkemoCore() {
     setTargetUrl(clean);
 
     addTerminalLog(`Target: ${clean}`);
-    addTerminalLog(`Stripping security headers & CORS...`);
+    addTerminalLog(`Bypassing restrictions...`);
     addTerminalLog(`Node: #${proxyIdx + 1} (${proxyList[proxyIdx].name})`);
 
     const selectedProxy = proxyList[proxyIdx];
