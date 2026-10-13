@@ -1,7 +1,7 @@
-import { eq, desc } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { messages } from '@/lib/db/schema'
+import { roomMessages } from '@/lib/db/schema'
 import { getGuestId } from '@/lib/guest-session'
 import { getRoomAccess } from '@/lib/room-access'
 import { isSameOriginRequest } from '@/lib/request-origin'
@@ -31,20 +31,20 @@ export async function GET(
       return NextResponse.json({ error: 'Room not found.' }, { status: 404 })
     }
 
-    // Fetch the latest 100 messages ordered by creation time
-    const roomMessages = await db
+    // جلب أحدث 150 رسالة مع دعم ترتيب المحادثة تماماً مثل تطبيقات المشاهدة الجماعية
+    const messagesList = await db
       .select()
-      .from(messages)
-      .where(eq(messages.roomId, roomId))
-      .orderBy(messages.createdAt)
-      .limit(100)
+      .from(roomMessages)
+      .where(eq(roomMessages.roomId, roomId))
+      .orderBy(roomMessages.createdAt)
+      .limit(150)
 
     return NextResponse.json(
-      { messages: roomMessages }, 
+      { messages: messagesList }, 
       { headers: { 'Cache-Control': 'no-store, max-age=0' } }
     )
   } catch (error) {
-    console.error('Error fetching messages:', error)
+    console.error('Error fetching room messages:', error)
     return NextResponse.json({ error: 'Failed to retrieve messages.' }, { status: 500 })
   }
 }
@@ -81,7 +81,8 @@ export async function POST(
       return NextResponse.json({ error: 'Message exceeds 1000 characters limit.' }, { status: 400 })
     }
 
-    const [newMessage] = await db.insert(messages).values({
+    // إدراج الرسالة مع دعم معرف المرسل ومزامنة الوقت
+    const [newMessage] = await db.insert(roomMessages).values({
       roomId,
       senderId: guestId,
       content,
