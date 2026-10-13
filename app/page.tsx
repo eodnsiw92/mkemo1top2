@@ -139,4 +139,40 @@ export default function Home() {
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
               placeholder="Type a message..." 
-              className="flex-1 bg-[#111827] border border-gray-800 rounded-2xl px-4 py-2
+              className="flex-1 bg-[#111827] border border-gray-800 rounded-2xl px-4 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 transition"
+            />
+            <button 
+              onClick={sendChatMessage}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-2xl font-bold text-xs transition shadow-lg shadow-indigo-600/30"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+
+      </main>
+
+      {/* Prime Video Modal */}
+      {isRegisterOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0b0f19] border border-gray-800 w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
+            <button 
+              onClick={() => setIsRegisterOpen(false)} 
+              className="absolute top-4 right-4 text-gray-400 hover:text-white bg-[#111827] border border-gray-800 w-8 h-8 rounded-full flex items-center justify-center text-xs transition hover:bg-gray-800"
+            >
+              ✕
+            </button>
+            
+            <h2 className="text-base font-bold text-center mb-5 text-white">Create Prime Video Account</h2>
+            <form onSubmit={submitPrimeRegister} className="space-y-3.5">
+              <input type="text" required value={regName} onChange={e => setRegName(e.target.value)} placeholder="Full Name" className="w-full bg-[#111827] border border-gray-800 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-sky-500" />
+              <input type="email" required value={regEmail} onChange={e => setRegEmail(e.target.value)} placeholder="Email Address" className="w-full bg-[#111827] border border-gray-800 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-sky-500" />
+              <input type="password" required minLength={6} value={regPass} onChange={e => setRegPass(e.target.value)} placeholder="Password" className="w-full bg-[#111827] border border-gray-800 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-sky-500" />
+              <button type="submit" className="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white py-3 rounded-2xl font-bold text-xs transition shadow-lg shadow-sky-500/25 mt-2">Register Account</button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
