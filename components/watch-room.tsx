@@ -5,290 +5,193 @@ import React, { useState, useRef, useEffect } from "react";
 interface ChatMessage {
   id: string;
   sender: string;
+  avatar: string;
   content: string;
-  timestamp: string;
-  isSystem: boolean;
-}
-
-interface RoomConfiguration {
-  title: string;
-  platform: "Prime" | "YouTube" | "Netflix" | "Custom";
-  currentPlaybackTime: number;
-  totalDuration: number;
-  activeStreamUrl: string;
-  primeVideoId: string;
-  isPlaybackActive: boolean;
-  participantCount: number;
-  qualityPreset: "1080p Full HD" | "4K Ultra HD" | "Maximum Uncompressed";
+  isHost?: boolean;
 }
 
 export default function WatchRoom() {
-  const [roomState, setRoomState] = useState<RoomConfiguration>({
-    title: "MKEMO Synchronized Media Room",
-    platform: "Prime",
-    currentPlaybackTime: 0,
-    totalDuration: 7200,
-    activeStreamUrl: "https://www.primevideo.com",
-    primeVideoId: "g1516087",
-    isPlaybackActive: true,
-    participantCount: 1,
-    qualityPreset: "4K Ultra HD",
-  });
+  const [videoUrl, setVideoUrl] = useState("https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1");
+  const [inputUrl, setInputUrl] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [inputMessage, setInputMessage] = useState("");
 
-  const [chatLog, setChatLog] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: "sys-1",
-      sender: "MKEMO System",
-      content: "Stream quality locked at Maximum Uncompressed (4K/1080p 60fps).",
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      isSystem: true,
+      id: "1",
+      sender: "A~:",
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
+      content: "Welcome to the watch party!",
+      isHost: true,
+    },
+    {
+      id: "2",
+      sender: "System",
+      avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100",
+      content: "Now Playing: Stream Video",
     },
   ]);
 
-  const [inputMessage, setInputMessage] = useState("");
-  const [inputUrlField, setInputUrlField] = useState("");
-  const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
-  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    chatScrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatLog]);
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim()) return;
 
-    const newMsg: ChatMessage = {
-      id: Date.now().toString(),
-      sender: "Host",
-      content: inputMessage.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      isSystem: false,
-    };
-
-    setChatLog((prev) => [...prev, newMsg]);
-    setInputMessage("");
-  };
-
-  const handleUrlLoad = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputUrlField.trim()) return;
-
-    let targetUrl = inputUrlField.trim();
-
-    if (targetUrl.includes("primevideo.com") || targetUrl.includes("amazon.com")) {
-      const match = targetUrl.match(/g[0-9]+/);
-      const videoId = match ? match[0] : "g1516087";
-      setRoomState((prev) => ({
-        ...prev,
-        platform: "Prime",
-        activeStreamUrl: targetUrl,
-        primeVideoId: videoId,
-      }));
-    } else {
-      setRoomState((prev) => ({
-        ...prev,
-        activeStreamUrl: targetUrl,
-      }));
-    }
-
-    setChatLog((prev) => [
+    setMessages((prev) => [
       ...prev,
       {
         id: Date.now().toString(),
-        sender: "MKEMO System",
-        content: `Media re-initialized with Maximum HD bitrate settings.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        isSystem: true,
+        sender: "User",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
+        content: inputMessage.trim(),
       },
     ]);
-
-    setInputUrlField("");
-    setIsControlPanelOpen(false);
+    setInputMessage("");
   };
 
-  const formatSecondsToClock = (totalSeconds: number): string => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = Math.floor(totalSeconds % 60);
+  const handleUrlSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputUrl.trim()) return;
 
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    let formatted = inputUrl.trim();
+    if (formatted.includes("youtube.com/watch?v=")) {
+      const id = formatted.split("v=")[1]?.split("&")[0];
+      formatted = `https://www.youtube.com/embed/${id}?autoplay=1`;
+    } else if (formatted.includes("youtu.be/")) {
+      const id = formatted.split("youtu.be/")[1]?.split("?")[0];
+      formatted = `https://www.youtube.com/embed/${id}?autoplay=1`;
     }
-    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+    setVideoUrl(formatted);
+    setInputUrl("");
+    setIsSearchOpen(false);
   };
 
   return (
-    <div className="relative w-full h-screen bg-[#050507] text-white flex flex-col justify-between overflow-hidden font-sans select-none ltr">
+    <div className="relative w-full h-screen bg-black text-white flex flex-col justify-between overflow-hidden font-sans select-none ltr">
       
-      {/* Top Navigation & Quality Indicator */}
-      <header className="absolute top-0 inset-x-0 z-30 px-5 py-3.5 bg-gradient-to-b from-black/95 via-black/60 to-transparent flex items-center justify-between backdrop-blur-md border-b border-white/5">
-        <div className="flex items-center gap-3.5">
-          <div className="relative w-11 h-11 rounded-2xl p-[2px] bg-gradient-to-tr from-[#BB00FF] via-[#FF0090] to-[#7000ff] shadow-xl shadow-purple-600/30">
-            <div className="w-full h-full bg-black rounded-[14px] flex items-center justify-center font-black text-xs tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white to-purple-300">
-              MK
-            </div>
-            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-black animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xs font-bold tracking-wide text-gray-100">{roomState.title}</h1>
-              <span className="px-2 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm">
-                {roomState.qualityPreset}
-              </span>
-            </div>
-            <p className="text-[10px] text-gray-400 flex items-center gap-1.5 mt-0.5">
-              <span>{roomState.platform} Mode</span>
-              <span>•</span>
-              <span className="text-emerald-400 font-medium">{roomState.participantCount} Synchronized</span>
-            </p>
-          </div>
+      {/* 1. Rave Top Gradient Header */}
+      <header className="absolute top-0 inset-x-0 z-30 px-4 py-3 bg-gradient-to-r from-[#0088ff] via-[#0055ff] to-[#0099ff] flex items-center justify-between shadow-md">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="text-white hover:opacity-80">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsControlPanelOpen(!isControlPanelOpen)}
-            className="bg-white/10 hover:bg-white/15 border border-white/15 rounded-xl px-3.5 py-2 text-xs font-semibold text-purple-200 transition-all active:scale-95 flex items-center gap-2 shadow-lg backdrop-blur-md"
-          >
-            <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        {/* MKEMO Logo Style */}
+        <h1 className="text-2xl font-black tracking-tighter italic text-white drop-shadow-md">
+          MKEMO
+        </h1>
+
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            <span>Media Engine</span>
-          </button>
+            <span className="absolute -top-1 -right-1 bg-cyan-400 text-black text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+              2
+            </span>
+          </div>
         </div>
       </header>
 
-      {/* Control Panel Modal for URL & Quality Configuration */}
-      {isControlPanelOpen && (
-        <div className="absolute top-20 inset-x-4 z-50 bg-[#121216]/95 border border-purple-500/30 p-4 rounded-3xl shadow-2xl backdrop-blur-2xl animate-in fade-in duration-200">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-pink-500 animate-ping" />
-              <h2 className="text-xs font-bold text-gray-200 uppercase tracking-wider">High Bitrate Media Control</h2>
-            </div>
+      {/* Media Search Modal Overlay */}
+      {isSearchOpen && (
+        <div className="absolute top-14 inset-x-3 z-50 bg-black/90 border border-blue-500/40 p-3 rounded-2xl backdrop-blur-xl shadow-2xl">
+          <form onSubmit={handleUrlSubmit} className="flex gap-2">
+            <input
+              type="text"
+              value={inputUrl}
+              onChange={(e) => setInputUrl(e.target.value)}
+              placeholder="Paste Video / YouTube Link..."
+              className="flex-1 bg-zinc-900 text-white text-xs px-3 py-2 rounded-xl border border-white/20 focus:outline-none focus:border-blue-400"
+            />
             <button
-              onClick={() => setIsControlPanelOpen(false)}
-              className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+              type="submit"
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-4 py-2 rounded-xl font-bold text-xs"
             >
-              ✕
+              Play
             </button>
-          </div>
-
-          <form onSubmit={handleUrlLoad} className="space-y-3">
-            <label className="text-[10px] font-medium text-gray-400 block">
-              Inject High-Quality Stream URL
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inputUrlField}
-                onChange={(e) => setInputUrlField(e.target.value)}
-                placeholder="Paste Prime / Web / Video Stream Link..."
-                className="flex-1 bg-black/60 text-white text-xs px-3.5 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:border-pink-500 transition-colors"
-              />
-              <button
-                type="submit"
-                className="bg-gradient-to-r from-purple-600 via-pink-600 to-[#FF0090] text-white px-5 py-2.5 rounded-xl font-bold text-xs shrink-0 shadow-lg active:scale-95 transition-transform"
-              >
-                Load Max
-              </button>
-            </div>
           </form>
         </div>
       )}
 
-      {/* Maximum Resolution Interactive Video Frame */}
-      <div className="relative w-full h-[54%] bg-black flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050507] via-transparent to-black/70 z-10 pointer-events-none" />
-
-        {/* Uncompressed High Resolution Player Window */}
-        <div className="absolute inset-0 w-full h-full bg-black">
-          <iframe
-            src={
-              roomState.platform === "Prime"
-                ? `https://www.primevideo.com`
-                : roomState.activeStreamUrl
-            }
-            title="MKEMO Maximum Quality Stream"
-            className="w-full h-full border-0 opacity-100 image-rendering-crisp transform-gpu"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen; hd"
-            allowFullScreen
-            style={{
-              filter: "contrast(105%) brightness(102%)",
-            }}
-          />
-        </div>
-
-        {/* Stream Progress Bar */}
-        <div className="absolute bottom-3 inset-x-4 z-20 flex items-center gap-3 bg-black/70 backdrop-blur-2xl px-4 py-2.5 rounded-2xl border border-white/10 shadow-2xl">
-          <span className="text-[11px] font-mono font-bold text-pink-400">
-            {formatSecondsToClock(roomState.currentPlaybackTime)}
-          </span>
-          <div className="flex-1 h-2 bg-white/20 rounded-full overflow-hidden cursor-pointer relative group">
-            <div
-              className="h-full bg-gradient-to-r from-purple-600 via-[#BB00FF] to-[#FF0090] rounded-full transition-all duration-300"
-              style={{ width: `${(roomState.currentPlaybackTime / roomState.totalDuration) * 100}%` }}
-            />
-          </div>
-          <span className="text-[11px] font-mono text-gray-400">
-            {formatSecondsToClock(roomState.totalDuration)}
-          </span>
-        </div>
+      {/* 2. Video Player Section */}
+      <div className="relative w-full h-[38%] bg-black mt-12 flex items-center justify-center z-10 shadow-xl">
+        <iframe
+          src={videoUrl}
+          title="MKEMO Stream"
+          className="w-full h-full border-0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
       </div>
 
-      {/* Chat & System Log Interface */}
-      <div className="relative w-full flex-1 bg-[#0a0a0e] rounded-t-[28px] z-20 flex flex-col justify-between overflow-hidden border-t border-white/10 shadow-[0_-20px_40px_rgba(0,0,0,0.95)]">
+      {/* 3. Rave Floating Ambient Chat Area */}
+      <div className="relative w-full flex-1 bg-gradient-to-b from-[#2a1b18] via-[#8d4229] to-[#d36b37] flex flex-col justify-between overflow-hidden">
         
-        {/* Messages Feed */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-3.5 scrollbar-none">
-          {chatLog.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex items-end gap-2.5 ${msg.isSystem ? "justify-center" : "flex-row"}`}
-            >
-              {msg.isSystem ? (
-                <div className="px-3.5 py-1 rounded-full bg-purple-950/60 border border-purple-500/30 text-[10px] text-purple-200 font-semibold tracking-wide shadow-sm">
-                  {msg.content}
-                </div>
-              ) : (
-                <>
-                  <div className="w-8 h-8 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center font-bold text-[11px] text-purple-400 shadow-sm shrink-0">
-                    {msg.sender[0]}
-                  </div>
-
-                  <div className="max-w-[80%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-lg bg-zinc-900/90 text-gray-200 rounded-bl-none border border-white/5">
-                    <div className="flex items-center justify-between gap-4 mb-1 opacity-60 text-[9px]">
-                      <span className="font-bold text-purple-300">{msg.sender}</span>
-                      <span>{msg.timestamp}</span>
-                    </div>
-                    <p className="font-normal">{msg.content}</p>
-                  </div>
-                </>
-              )}
+        {/* Messages Feed Floating Over Ambient Background */}
+        <div className="flex-1 p-4 overflow-y-auto space-y-4 scrollbar-none flex flex-col justify-end">
+          {messages.map((msg) => (
+            <div key={msg.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+              <div className="relative shrink-0">
+                <img
+                  src={msg.avatar}
+                  alt={msg.sender}
+                  className="w-10 h-10 rounded-full border-2 border-white/30 object-cover shadow-md"
+                />
+                {msg.isHost && (
+                  <span className="absolute -top-1.5 -right-1 text-xs">👑</span>
+                )}
+              </div>
+              <div className="text-sm font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                <span className="mr-2 text-white/90">{msg.sender}:</span>
+                <span className="font-normal text-white">{msg.content}</span>
+              </div>
             </div>
           ))}
-          <div ref={chatScrollRef} />
+          <div ref={chatBottomRef} />
         </div>
 
-        {/* Input Field */}
-        <form
-          onSubmit={handleSendMessage}
-          className="p-3.5 bg-black/80 backdrop-blur-2xl border-t border-white/10 flex items-center gap-2.5"
-        >
-          <input
-            type="text"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Type message..."
-            className="flex-1 bg-white/5 text-white text-xs px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-pink-500 transition-colors placeholder:text-gray-500 font-medium"
-          />
-          <button
-            type="submit"
-            className="bg-gradient-to-tr from-[#BB00FF] via-[#FF0090] to-purple-600 text-white px-6 py-3 rounded-xl font-bold text-xs hover:opacity-95 active:scale-95 transition-all shadow-lg shadow-purple-600/30 shrink-0"
-          >
-            Send
+        {/* 4. Rave Bottom Floating Controls Bar */}
+        <div className="p-3 bg-black/20 backdrop-blur-md flex items-center justify-between gap-2 border-t border-white/10">
+          
+          {/* Microphone Circular Button */}
+          <button className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg active:scale-90 transition-transform shrink-0">
+            <svg className="w-6 h-6 text-zinc-900" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+            </svg>
           </button>
-        </form>
+
+          {/* Quick Input Bar */}
+          <form onSubmit={handleSendMessage} className="flex-1 flex items-center gap-2">
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder="Chat..."
+              className="w-full bg-white/20 text-white text-xs px-4 py-3 rounded-full border border-white/20 focus:outline-none placeholder:text-white/70 backdrop-blur-md font-medium"
+            />
+          </form>
+
+          {/* Action Icons */}
+          <div className="flex items-center gap-2 text-white/80 shrink-0">
+            <button className="p-2 hover:text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+            </button>
+          </div>
+
+        </div>
 
       </div>
 
