@@ -18,7 +18,7 @@ export default function MkemoCore() {
   const [framerate, setFramerate] = useState<'60fps' | '144fps' | 'unlimited'>('144fps');
   const [chatText, setChatText] = useState('');
   const [messages, setMessages] = useState<ChatMsg[]>([
-    { id: '1', sender: 'mkemo', text: 'Stream player and bypass core online.', time: '12:00' }
+    { id: '1', sender: 'mkemo', text: 'Bypass core online and ready.', time: '12:00' }
   ]);
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,7 +31,7 @@ export default function MkemoCore() {
   }, []);
 
   const proxyList = [
-    { name: 'mkemo PythonAnywhere', url: 'https://ubnt72.pythonanywhere.com/proxy?url=' },
+    { name: 'PythonAnywhere Core', url: 'https://ubnt72.pythonanywhere.com/proxy?url=' },
     { name: 'AllOrigins Gateway', url: 'https://api.allorigins.win/raw?url=' },
     { name: 'CorsProxy Network', url: 'https://corsproxy.io/?' },
     { name: 'CodeTabs Shield', url: 'https://api.codetabs.com/v1/proxy?quest=' },
@@ -45,7 +45,7 @@ export default function MkemoCore() {
     setTargetUrl(clean);
 
     addTerminalLog(`Target: ${clean}`);
-    addTerminalLog(`Bypassing CORS & X-Frame headers...`);
+    addTerminalLog(`Stripping security headers & CORS...`);
     addTerminalLog(`Node: #${proxyIdx + 1} (${proxyList[proxyIdx].name})`);
 
     const selectedProxy = proxyList[proxyIdx];
@@ -55,7 +55,7 @@ export default function MkemoCore() {
       setIframeSrc(finalDestination);
       setActiveProxy(proxyIdx);
       setLoading(false);
-      addTerminalLog(`Stream loaded | Quality: ${quality.toUpperCase()} | FPS: ${framerate.toUpperCase()}`);
+      addTerminalLog(`Stream active | Quality: ${quality.toUpperCase()} | FPS: ${framerate.toUpperCase()}`);
     }, 350);
   }, [quality, framerate, addTerminalLog]);
 
@@ -87,74 +87,58 @@ export default function MkemoCore() {
   };
 
   return (
-    <div className="bg-[#020308] text-gray-100 font-sans min-h-screen flex flex-col selection:bg-rose-600 selection:text-white" dir="ltr">
-      
-      {/* Header */}
-      <header className="bg-[#050714]/95 border-b border-rose-500/20 px-6 py-4 flex justify-between items-center backdrop-blur-2xl sticky top-0 z-50 shadow-2xl">
-        <div className="flex items-center space-x-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-600 via-purple-600 to-indigo-600 flex items-center justify-center font-black text-white text-base shadow-lg shadow-rose-600/40">M</div>
-          <div>
-            <h1 className="text-base font-black tracking-wide text-white flex items-center gap-2">
-              mkemo 
-              <span className="text-[10px] font-extrabold text-rose-400 px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/30 uppercase tracking-widest">Player Core</span>
-            </h1>
-          </div>
+    <div className="bg-black text-gray-100 min-h-screen flex flex-col" dir="ltr">
+      <header className="bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center font-bold text-white text-base">M</div>
+          <h1 className="text-base font-bold text-white">mkemo Bypass Core</h1>
         </div>
-        <div className="flex items-center gap-2 bg-rose-500/10 px-4 py-1.5 rounded-full border border-rose-500/20 text-xs">
-          <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-          <span className="text-rose-300 font-bold">Engine Online</span>
+        <div className="flex items-center gap-2 bg-rose-950/50 border border-rose-800 px-3 py-1 rounded-full text-xs text-rose-300">
+          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+          <span>Shields Active</span>
         </div>
       </header>
 
-      {/* Main Layout */}
-      <main className="flex-1 max-w-[1800px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Terminal Logs Sidebar */}
-        <div className="hidden lg:flex lg:col-span-3 bg-[#04060e]/90 border border-white/5 rounded-3xl p-4 flex-col space-y-4 h-[780px] shadow-2xl backdrop-blur-2xl overflow-hidden">
-          <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">System Logs</h2>
-          <div className="flex-1 bg-black/80 border border-white/5 rounded-2xl p-3.5 overflow-y-auto space-y-1.5 font-mono text-[10px] text-rose-300/90 shadow-inner">
+        <div className="hidden lg:flex lg:col-span-3 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex-col space-y-3 h-[750px]">
+          <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Terminal Logs</h2>
+          <div className="flex-1 bg-black/70 border border-zinc-800 rounded-xl p-3 overflow-y-auto space-y-1 font-mono text-[11px] text-rose-400">
             {logs.length === 0 ? (
-              <p className="text-gray-600 italic">Waiting for target link...</p>
+              <p className="text-zinc-600 italic">Awaiting target link...</p>
             ) : (
-              logs.map((log, index) => <div key={index} className="break-all border-b border-rose-500/10 pb-1">{log}</div>)
+              logs.map((log, idx) => <div key={idx} className="break-all border-b border-zinc-900 pb-1">{log}</div>)
             )}
           </div>
         </div>
 
-        {/* Center: Video Player & Controls */}
         <div className="w-full lg:col-span-6 flex flex-col space-y-4">
-          
-          {/* URL Input */}
-          <div className="bg-[#04060e]/90 p-4 rounded-3xl border border-white/5 flex flex-col sm:flex-row gap-3 shadow-2xl backdrop-blur-2xl">
+          <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800 flex flex-col sm:flex-row gap-3">
             <input 
               type="text" 
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
-              placeholder="Paste video or site link (e.g., https://anime3rb.com/...)" 
-              className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-4.5 py-3.5 text-xs sm:text-sm text-gray-200 focus:outline-none focus:border-rose-500 transition font-medium shadow-inner"
+              placeholder="Paste link (e.g., https://anime3rb.com/...)" 
+              className="flex-1 bg-black border border-zinc-700 rounded-xl px-4 py-3 text-xs sm:text-sm text-zinc-200 focus:outline-none focus:border-rose-600"
             />
             <button 
               onClick={handleRunStream}
               disabled={loading}
-              className="bg-gradient-to-r from-rose-600 to-purple-600 hover:opacity-90 text-white px-7 py-3.5 rounded-2xl font-black text-xs sm:text-sm transition shadow-xl shadow-rose-600/30 shrink-0 active:scale-95 disabled:opacity-50"
+              className="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl font-bold text-xs sm:text-sm transition disabled:opacity-50"
             >
               {loading ? 'Bypassing...' : 'Run Stream'}
             </button>
           </div>
 
-          {/* Quality & Framerate Controller */}
-          <div className="bg-[#04060e]/90 p-4 rounded-3xl border border-white/5 flex flex-wrap items-center justify-between gap-4 shadow-2xl backdrop-blur-2xl text-xs">
+          <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800 flex flex-wrap items-center justify-between gap-4 text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Quality:</span>
+              <span className="text-zinc-400 font-bold uppercase text-[10px]">Quality:</span>
               <div className="flex gap-1">
                 {(['1080p', '4k', 'auto'] as const).map(q => (
                   <button
                     key={q}
-                    onClick={() => {
-                      setQuality(q);
-                      addTerminalLog(`Quality set to ${q.toUpperCase()}`);
-                    }}
-                    className={`px-3 py-2 rounded-xl font-black uppercase transition ${quality === q ? 'bg-rose-600 text-white shadow-lg' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                    onClick={() => { setQuality(q); addTerminalLog(`Quality set to ${q}`); }}
+                    className={`px-3 py-1.5 rounded-lg font-bold uppercase transition ${quality === q ? 'bg-rose-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
                   >
                     {q}
                   </button>
@@ -163,16 +147,13 @@ export default function MkemoCore() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">FPS:</span>
+              <span className="text-zinc-400 font-bold uppercase text-[10px]">FPS:</span>
               <div className="flex gap-1">
                 {(['60fps', '144fps', 'unlimited'] as const).map(f => (
                   <button
                     key={f}
-                    onClick={() => {
-                      setFramerate(f);
-                      addTerminalLog(`FPS set to ${f.toUpperCase()}`);
-                    }}
-                    className={`px-3 py-2 rounded-xl font-black uppercase transition ${framerate === f ? 'bg-purple-600 text-white shadow-lg' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                    onClick={() => { setFramerate(f); addTerminalLog(`FPS set to ${f}`); }}
+                    className={`px-3 py-1.5 rounded-lg font-bold uppercase transition ${framerate === f ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
                   >
                     {f}
                   </button>
@@ -181,17 +162,16 @@ export default function MkemoCore() {
             </div>
           </div>
 
-          {/* Proxy Switcher Toolbar */}
           {targetUrl && (
-            <div className="bg-[#04060e]/90 px-4 py-3 rounded-2xl border border-rose-500/20 flex flex-wrap items-center justify-between gap-3 text-xs backdrop-blur-md shadow-lg">
-              <span className="text-rose-400 font-black flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+            <div className="bg-zinc-900/80 px-4 py-3 rounded-2xl border border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <span className="text-rose-400 font-bold flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
                 Node #{activeProxy + 1} ({proxyList[activeProxy]?.name})
               </span>
               <div className="flex gap-2">
                 <button 
                   onClick={handleNextProxyNode}
-                  className="px-3.5 py-2 rounded-xl font-black bg-rose-600 hover:bg-rose-500 text-white transition shadow-lg active:scale-95"
+                  className="px-3 py-1.5 rounded-lg font-bold bg-rose-600 hover:bg-rose-500 text-white transition"
                 >
                   Switch Node ⚡
                 </button>
@@ -199,7 +179,7 @@ export default function MkemoCore() {
                   href={targetUrl} 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="px-3.5 py-2 rounded-xl font-black bg-white/10 hover:bg-white/15 text-gray-200 transition"
+                  className="px-3 py-1.5 rounded-lg font-bold bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition"
                 >
                   Open Original ↗
                 </a>
@@ -207,8 +187,7 @@ export default function MkemoCore() {
             </div>
           )}
 
-          {/* Cinematic Video Box */}
-          <div className="relative w-full aspect-video min-h-[350px] sm:min-h-[500px] lg:min-h-[600px] bg-black rounded-3xl overflow-hidden border border-rose-500/20 shadow-2xl flex items-center justify-center group">
+          <div className="relative w-full aspect-video min-h-[350px] sm:min-h-[480px] bg-black rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl flex items-center justify-center">
             {iframeSrc ? (
               <iframe 
                 src={iframeSrc} 
@@ -218,5 +197,51 @@ export default function MkemoCore() {
                 allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
               />
             ) : (
-              <div className="flex flex-col items-center justify-center text-gray-500 text-xs sm:text-sm space-y-4 p-6 text-center">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-rose-500/10 border border
+              <div className="flex flex-col items-center justify-center text-zinc-600 space-y-3 p-6 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-rose-500 text-xl font-bold">▶</div>
+                <p className="text-zinc-500 text-xs">Paste your link above and click Run Stream to watch.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="w-full lg:col-span-3 bg-zinc-900/80 border border-zinc-800 rounded-2xl flex flex-col h-[500px] lg:h-[750px] overflow-hidden">
+          <div className="p-4 border-b border-zinc-800 bg-zinc-900 flex justify-between items-center">
+            <h3 className="font-bold text-xs text-zinc-200 uppercase">Live Chat</h3>
+            <span className="text-[10px] text-rose-400 font-bold px-2 py-0.5 rounded bg-rose-950">mkemo</span>
+          </div>
+
+          <div ref={chatBoxRef} className="flex-1 p-3 overflow-y-auto space-y-2.5 flex flex-col">
+            {messages.map(m => (
+              <div key={m.id} className="bg-black/60 border border-zinc-800 p-2.5 rounded-xl text-xs text-zinc-200 space-y-1">
+                <div className="flex justify-between items-center text-[10px] text-rose-400 font-bold">
+                  <span>{m.sender}</span>
+                  <span className="text-zinc-600">{m.time}</span>
+                </div>
+                <p className="text-zinc-300">{m.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-3 border-t border-zinc-800 bg-zinc-900 flex gap-2">
+            <input 
+              type="text" 
+              value={chatText}
+              onChange={(e) => setChatText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
+              placeholder="Type message..." 
+              className="flex-1 bg-black border border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-rose-600"
+            />
+            <button 
+              onClick={sendChatMessage}
+              className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl font-bold text-xs transition"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  );
+}
