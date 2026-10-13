@@ -42,11 +42,10 @@ export default function Home() {
     setSystemLogs(prev => [`[${time}] ${text}`, ...prev.slice(0, 30)]);
   }, []);
 
-  const proxyGateways = [
-    { name: 'AllOrigins Raw Core', url: 'https://api.allorigins.win/raw?url=' },
+    { name: 'mkemo PythonAnywhere Core', url: 'https://ubnt72.pythonanywhere.com/proxy?url=' },
+    { name: 'AllOrigins Raw Gateway', url: 'https://api.allorigins.win/raw?url=' },
     { name: 'CorsProxy Global', url: 'https://corsproxy.io/?' },
     { name: 'CodeTabs Shield', url: 'https://api.codetabs.com/v1/proxy?quest=' },
-    { name: 'ThingProxy Secure', url: 'https://thingproxy.freeboard.io/fetch/' },
     { name: 'Direct Socket Matrix', url: '' }
   ];
 
@@ -278,58 +277,4 @@ export default function Home() {
         </div>
 
         {/* Right Column: Neural Chat */}
-        <div className="w-full lg:col-span-3 bg-[#04060e]/90 border border-white/5 rounded-3xl flex flex-col h-[500px] lg:h-[800px] shadow-2xl backdrop-blur-2xl overflow-hidden">
-          <div className="p-4 border-b border-white/5 bg-white/5 flex justify-between items-center backdrop-blur-md">
-            <h3 className="font-black text-xs sm:text-sm text-white uppercase tracking-wider">Live Chat</h3>
-            <span className="text-[10px] text-rose-400 font-bold px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20">mkemo room</span>
-          </div>
-
-          <div ref={chatRef} className="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col">
-            {messages.map(msg => (
-              <div key={msg.id} className="bg-white/5 border border-white/5 p-3 rounded-2xl text-xs sm:text-sm text-gray-200 break-words shadow-lg space-y-1">
-                <div className="flex justify-between items-center text-[10px] text-rose-400 font-bold">
-                  <span>{msg.user}</span>
-                  <span className="text-gray-500">{msg.timestamp}</span>
-                </div>
-                <p className="text-gray-200 font-medium">{msg.text}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-3.5 border-t border-white/5 bg-[#04060e] flex gap-2.5">
-            <input 
-              type="text" 
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
-              placeholder="Type a message..." 
-              className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-4 py-3 text-xs sm:text-sm text-gray-200 focus:outline-none focus:border-rose-500 transition shadow-inner"
-            />
-            <button 
-              onClick={sendChatMessage}
-              className="bg-rose-600 hover:bg-rose-500 text-white px-5 py-3 rounded-2xl font-black text-xs sm:text-sm transition shadow-lg shadow-rose-600/30 active:scale-95"
-            >
-              Send
-            </button>
-          </div>
-        </div>
-
-      </main>
-
-      {/* Prime Account Modal */}
-      {isRegisterOpen && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-2xl flex items-center justify-center z-50 p-4">
-          <div className="bg-[#050712] border border-rose-500/30 w-full max-w-md rounded-3xl p-6 shadow-2xl relative backdrop-blur-2xl">
-            <button 
-              onClick={() => setIsRegisterOpen(false)} 
-              className="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/5 border border-white/10 w-9 h-9 rounded-full flex items-center justify-center text-xs transition font-bold"
-            >
-              ✕
-            </button>
-            
-            <h2 className="text-base sm:text-lg font-black text-center mb-5 text-white">Create Prime Account</h2>
-            <form onSubmit={submitRegister} className="space-y-4">
-              <input type="text" required value={regName} onChange={e => setRegName(e.target.value)} placeholder="Full Name" className="w-full bg-black/60 border border-white/10 rounded-2xl px-4 py-3.5 text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500 shadow-inner" />
-              <input type="email" required value={regEmail} onChange={e => setRegEmail(e.target.value)} placeholder="Email Address" className="w-full bg-black/60 border border-white/10 rounded-2xl px-4 py-3.5 text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500 shadow-inner" />
-              <input type="password" required minLength={6} value={regPass} onChange={e => setRegPass(e.target.value)} placeholder="Password" className="w-full bg-black/60 border border-white/10 rounded-2xl px-4 py-3.5 text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500 shadow-inner" />
-              <button type="submit" className="w-full bg-gradient-to-r from-rose-600 to-purple
+        <div className="w-full lg:col-span-3 bg-[#04060e]/90 border border-white/5 rounded-3xl flex flex-
