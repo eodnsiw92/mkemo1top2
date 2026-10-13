@@ -1,46 +1,102 @@
-import { and, count, eq, gt } from 'drizzle-orm'
-import { randomUUID } from 'node:crypto'
+import { eq, desc } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { roomMembers, roomMessages } from '@/lib/db/schema'
-import { cleanMessage, containsProhibitedSearch } from '@/lib/content-safety'
+import { messages } from '@/lib/db/schema'
 import { getGuestId } from '@/lib/guest-session'
-import { isRoomMember } from '@/lib/room-access'
+import { getRoomAccess } from '@/lib/room-access'
 import { isSameOriginRequest } from '@/lib/request-origin'
 
-export async function POST(request: NextRequest, context: { params: Promise<{ roomId: string }> }) {
-  if (!isSameOriginRequest(request)) return NextResponse.json({ error: 'Cross-origin request denied.' }, { status: 403 })
-  const { roomId } = await context.params
-  const guestId = await getGuestId()
-  if (!await isRoomMember(roomId, guestId)) return NextResponse.json({ error: 'Join the room before sending a message.' }, { status: 403 })
-
-  let payload: unknown
-  try { payload = await request.json() } catch { return NextResponse.json({ error: 'Invalid message.' }, { status: 400 }) }
-  if (!payload || typeof payload !== 'object') return NextResponse.json({ error: 'Invalid message.' }, { status: 400 })
-  const input = payload as { text?: unknown; attachmentPath?: unknown }
-  const text = typeof input.text === 'string' ? cleanMessage(input.text).slice(0, 2000) : ''
-  const attachmentPath = typeof input.attachmentPath === 'string' && input.attachmentPath.startsWith(`room-media/${roomId}/`) ? input.attachmentPath : null
-  if (!text && !attachmentPath) return NextResponse.json({ error: 'Write a message or attach media.' }, { status: 400 })
-  if (containsProhibitedSearch(text)) return NextResponse.json({ error: 'Pornographic or adult content is not allowed in room chat.' }, { status: 422 })
-
-  const cutoff = new Date(Date.now() - 10_000)
-  const [recent] = await db.select({ total: count() }).from(roomMessages)
-    .where(and(eq(roomMessages.roomId, roomId), eq(roomMessages.guestId, guestId), gt(roomMessages.createdAt, cutoff)))
-  if ((recent?.total ?? 0) >= 6) return NextResponse.json({ error: 'Slow down a little before sending another message.' }, { status: 429 })
-
-  const [member] = await db.select({ displayName: roomMembers.displayName }).from(roomMembers)
-    .where(and(eq(roomMembers.roomId, roomId), eq(roomMembers.guestId, guestId))).limit(1)
-  if (!member) return NextResponse.json({ error: 'Join the room before sending a message.' }, { status: 403 })
-
-  const [message] = await db.insert(roomMessages).values({ id: randomUUID(), roomId, guestId, displayName: member.displayName, body: text, attachmentPath })
-    .returning({ id: roomMessages.id, guestId: roomMessages.guestId, displayName: roomMessages.displayName, body: roomMessages.body, createdAt: roomMessages.createdAt, attachmentPath: roomMessages.attachmentPath })
-  return NextResponse.json({ message: {
-    id: message.id,
-    guestId: message.guestId,
-    name: message.displayName,
-    text: message.body,
-    createdAt: message.createdAt,
-    attachmentUrl: message.attachmentPath ? `/api/rooms/${encodeURIComponent(roomId)}/media?pathname=${encodeURIComponent(message.attachmentPath)}` : null,
-    attachmentKind: message.attachmentPath && /\.(mp4|webm)$/i.test(message.attachmentPath) ? 'video' : message.attachmentPath ? 'image' : null,
-  } }, { status: 201, headers: { 'Cache-Control': 'no-store' } })
+export async function generateStaticParams() {
+  return [{ roomId: 'default' }]
 }
+
+export async function GET(
+  request: NextRequest, 
+  context: { params: Promise<{ roomId: string }> }
+) {
+  try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ error: 'Cross-origin request denied.' }, { status: 403 })
+    }
+
+    const { roomId } = await context.params
+    if (!roomId || typeof roomId !== 'string') {
+      return NextResponse.json({ error: 'Invalid room ID.' }, { status: 400 })
+    }
+
+    const guestId = await getGuestId()
+    const { room } = await getRoomAccess(roomId, guestId)
+
+    if (!room) {
+      return NextResponse.json({ error: 'Room not found.' }, { status: 404 })
+    }
+
+    // Fetch the latest 100 messages ordered by creation time
+    const roomMessages = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.roomId, roomId))
+      .orderBy(messages.createdAt)
+      .limit(100)
+
+    return NextResponse.json(
+      { messages: roomMessages }, 
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    )
+  } catch (error) {
+    console.error('Error fetching messages:', error)
+    return NextResponse.json({ error: 'Failed to retrieve messages.' }, { status: 500 })
+  }
+}
+
+export async function POST(
+  request: NextRequest, 
+  context: { params: Promise<{ roomId: string }> }
+) {
+  try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ error: 'Cross-origin request denied.' }, { status: 403 })
+    }
+
+    const { roomId } = await context.params
+    if (!roomId || typeof roomId !== 'string') {
+      return NextResponse.json({ error: 'Invalid room ID.' }, { status: 400 })
+    }
+
+    const guestId = await getGuestId()
+    const { room } = await getRoomAccess(roomId, guestId)
+
+    if (!room) {
+      return NextResponse.json({ error: 'Room not found.' }, { status: 404 })
+    }
+
+    const body = await request.json()
+    const content = typeof body?.content === 'string' ? body.content.trim() : ''
+
+    if (!content) {
+      return NextResponse.json({ error: 'Message content cannot be empty.' }, { status: 400 })
+    }
+
+    if (content.length > 1000) {
+      return NextResponse.json({ error: 'Message exceeds 1000 characters limit.' }, { status: 400 })
+    }
+
+    const [newMessage] = await db.insert(messages).values({
+      roomId,
+      senderId: guestId,
+      content,
+    }).returning()
+
+    return NextResponse.json(
+      { message: newMessage }, 
+      { 
+        status: 201,
+        headers: { 'Cache-Control': 'no-store, max-age=0' } 
+      }
+    )
+  } catch (error) {
+    console.error('Error posting message:', error)
+    return NextResponse.json({ error: 'Failed to send message.' }, { status: 500 })
+  }
+}
+
