@@ -34,7 +34,7 @@ export default function MkemoGodTierPenetrationMaster() {
   const [framerate, setFramerate] = useState<'60fps' | '144fps' | 'unlimited'>('unlimited');
   const [chatText, setChatText] = useState('');
   const [messages, setMessages] = useState<ChatMsg[]>([
-    { id: '1', sender: 'mkemo', text: 'God-Tier Ultra Penetration Core v25.0 active. All site defenses completely obliterated.', time: '12:00' }
+    { id: '1', sender: 'mkemo', text: 'God-Tier Ultra Penetration Core v30.0 active. All site defenses completely obliterated.', time: '12:00' }
   ]);
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,7 +46,6 @@ export default function MkemoGodTierPenetrationMaster() {
     setLogs(prev => [`[${timestamp}] ${txt}`, ...prev.slice(0, 80)]);
   }, []);
 
-  // 30 Advanced God-Tier Penetration & Firewall Decimation Cores
   const godEngines: GodPenetrationCore[] = [
     { id: 0, name: 'God-Tier Direct Socket Bypass', payloadEndpoint: '', penetrationLevel: 'ABSOLUTE_GOD', bypassEfficiency: '100%' },
     { id: 1, name: 'CorsProxy Global Matrix V2', payloadEndpoint: 'https://corsproxy.io/?', penetrationLevel: 'MAX_EXTREME', bypassEfficiency: '99.9%' },
@@ -69,7 +68,7 @@ export default function MkemoGodTierPenetrationMaster() {
     setTargetUrl(clean);
 
     addTerminalLog(`GOD-INJECTION TARGET: ${clean}`);
-    addTerminalLog(`DECIMATING X-FRAME-OPTIONS, CORS, CSP & CLOUDFLARE SHIELDS VIA 30-CORE MATRIX...`);
+    addTerminalLog(`DECIMATING X-FRAME-OPTIONS, CORS, CSP & CLOUDFLARE SHIELDS...`);
     addTerminalLog(`ENGAGING GOD ENGINE #${engineIdx + 1} (${godEngines[engineIdx].name})`);
 
     const selectedEngine = godEngines[engineIdx];
@@ -121,7 +120,7 @@ export default function MkemoGodTierPenetrationMaster() {
       <header className="bg-zinc-900 border-b border-zinc-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-2xl">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center font-bold text-white text-base shadow-lg shadow-rose-600/50">M</div>
-          <h1 className="text-base font-bold text-white">mkemo God-Tier Penetration Core v25</h1>
+          <h1 className="text-base font-bold text-white">mkemo God-Tier Penetration Core v30</h1>
         </div>
         <div className="flex items-center gap-2 bg-rose-950/60 border border-rose-700 px-3.5 py-1.5 rounded-full text-xs text-rose-300 shadow-inner">
           <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
@@ -131,7 +130,6 @@ export default function MkemoGodTierPenetrationMaster() {
 
       <main className="flex-1 max-w-[1800px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Column: Room Operatives & God-Tier Logs */}
         <div className="hidden lg:flex lg:col-span-3 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex-col space-y-4 h-[840px]">
           <div>
             <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2.5">Supreme Operatives ({roomPeers.length})</h2>
@@ -153,78 +151,4 @@ export default function MkemoGodTierPenetrationMaster() {
 
           <div className="flex-1 flex flex-col pt-2 border-t border-zinc-800 overflow-hidden">
             <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">God Terminal Logs</h3>
-            <div className="flex-1 bg-black/80 border border-zinc-800 rounded-xl p-3 overflow-y-auto space-y-1 font-mono text-[11px] text-rose-400">
-              {logs.length === 0 ? (
-                <p className="text-zinc-600 italic">Waiting for target link injection...</p>
-              ) : (
-                logs.map((log, idx) => <div key={idx} className="break-all border-b border-zinc-900 pb-1">{log}</div>)
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Center Column: Injection, Controls & Video Matrix */}
-        <div className="w-full lg:col-span-6 flex flex-col space-y-4">
-          <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800 flex flex-col sm:flex-row gap-3 shadow-xl">
-            <input 
-              type="text" 
-              value={inputUrl}
-              onChange={(e) => setInputUrl(e.target.value)}
-              placeholder="Paste target link (e.g., https://anime3rb.com/...)" 
-              className="flex-1 bg-black border border-zinc-700 rounded-xl px-4 py-3 text-xs sm:text-sm text-zinc-200 focus:outline-none focus:border-rose-600 shadow-inner"
-            />
-            <button 
-              onClick={handleRunGodPenetration}
-              disabled={loading}
-              className="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl font-bold text-xs sm:text-sm transition shadow-lg shadow-rose-900/50 disabled:opacity-50"
-            >
-              {loading ? 'Executing God Hack...' : 'Force God Penetration'}
-            </button>
-          </div>
-
-          <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800 flex flex-wrap items-center justify-between gap-4 text-xs shadow-xl">
-            <div className="flex items-center gap-2">
-              <span className="text-zinc-400 font-bold uppercase text-[10px]">Quality:</span>
-              <div className="flex gap-1">
-                {(['1080p', '4k', 'auto'] as const).map(q => (
-                  <button
-                    key={q}
-                    onClick={() => { setQuality(q); addTerminalLog(`Quality set to ${q.toUpperCase()}`); }}
-                    className={`px-3 py-1.5 rounded-lg font-bold uppercase transition ${quality === q ? 'bg-rose-600 text-white shadow' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-zinc-400 font-bold uppercase text-[10px]">FPS:</span>
-              <div className="flex gap-1">
-                {(['60fps', '144fps', 'unlimited'] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => { setFramerate(f); addTerminalLog(`FPS matrix locked to ${f.toUpperCase()}`); }}
-                    className={`px-3 py-1.5 rounded-lg font-bold uppercase transition ${framerate === f ? 'bg-purple-600 text-white shadow' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {targetUrl && (
-            <div className="bg-zinc-900/80 px-4 py-3 rounded-2xl border border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xl">
-              <span className="text-rose-400 font-bold flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                God Engine #{activeGodEngine + 1} ({godEngines[activeGodEngine]?.name})
-              </span>
-              <div className="flex gap-2">
-                <button 
-                  onClick={handleNextGodEngineNode}
-                  className="px-3.5 py-1.5 rounded-lg font-bold bg-rose-600 hover:bg-rose-500 text-white transition shadow"
-                >
-                  Switch God Engine ⚡
-                </button>
-                <a 
+            <div className="flex-1 bg-black/80 border border-zinc-800 rounded-xl p-3 overflow-y-auto space-y-1 font
