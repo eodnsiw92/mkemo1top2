@@ -2,208 +2,294 @@
 
 import React, { useState, useRef, useEffect } from "react";
 
-interface Message {
+interface ChatMessage {
   id: string;
-  user: string;
-  text: string;
+  sender: string;
+  content: string;
   timestamp: string;
-  isMe: boolean;
+  isSystem: boolean;
 }
 
-interface RoomStats {
-  roomName: string;
-  onlineCount: number;
-  isPlaying: boolean;
-  currentTime: number;
-  duration: number;
+interface RoomConfiguration {
+  title: string;
+  platform: "Prime" | "YouTube" | "Netflix" | "Custom";
+  currentPlaybackTime: number;
+  totalDuration: number;
+  activeStreamUrl: string;
+  primeVideoId: string;
+  isPlaybackActive: boolean;
+  participantCount: number;
+  qualityPreset: "1080p Full HD" | "4K Ultra HD" | "Maximum Uncompressed";
 }
-
-const HeadphonesIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5 text-white" }) => (
-  <svg viewBox="0 0 50 50" className={className} fill="currentColor">
-    <path d="M43.8,38.1c0,6.3 -2.5,7.9 -6,8.4V29.8C41.3,30.4 43.8,32 43.8,38.1z" />
-    <path d="M36.8,29.3V47c0,1.1 -0.9,2 -2,2c-1.1,0 -2,-0.9 -2,-2V29.3c0,-1.1 0.9,-2 2,-2C35.9,27.3 36.8,28.2 36.8,29.3z" />
-    <path d="M4.6,33.7c-0.5,0 -1,0.2 -1.5,0.4v-6.5c0.1,0 0.3,0 0.4,0h1.2v6H4.6z" />
-    <path d="M47.1,36.3V40c0,0.9 -0.7,1.6 -1.6,1.6h-1c0.2,-1 0.3,-2.1 0.3,-3.4c0,-1.3 -0.1,-2.4 -0.3,-3.4h1C46.4,34.7 47.1,35.5 47.1,36.3z" />
-    <path d="M47.5,21.7v3.9c0,0.6 -0.5,1.1 -1.1,1.1h-1.2c-0.6,0 -1.1,-0.5 -1.1,-1.1v-3.9c0,-9.5 -8.5,-17.2 -19.1,-17.2S5.9,12.2 5.9,21.7v3.9c0,0.6 -0.5,1.1 -1.1,1.1H3.6c-0.6,0 -1.1,-0.5 -1.1,-1.1v-3.9C2.5,10.3 12.6,1 25,1C37.4,1 47.5,10.3 47.5,21.7z" />
-    <path d="M12.3,29.8v16.8c-3.5,-0.6 -6,-2.1 -6,-8.4C6.3,32 8.8,30.3 12.3,29.8z" />
-    <path d="M45.5,33.7h-0.6v-6c0.1,0 0.2,0 0.3,0h1.2c0,0 0.1,0 0.1,0V34C46.2,33.8 45.8,33.7 45.5,33.7z" />
-    <path d="M5.6,34.7c-0.2,1 -0.3,2.1 -0.3,3.4c0,1.3 0.1,2.5 0.3,3.4h-1C3.7,41.6 3,40.9 3,40v-3.6c0,-0.9 0.7,-1.6 1.6,-1.6H5.6z" />
-    <path d="M17.2,29.3V47c0,1.1 -0.9,2 -2,2c-1.1,0 -2,-0.9 -2,-2V29.3c0,-1.1 0.9,-2 2,-2C16.3,27.3 17.2,28.2 17.2,29.3z" />
-  </svg>
-);
 
 export default function WatchRoom() {
-  const [stats, setStats] = useState<RoomStats>({
-    roomName: "Public Watch Room",
-    onlineCount: 2,
-    isPlaying: true,
-    currentTime: 142,
-    duration: 600,
+  const [roomState, setRoomState] = useState<RoomConfiguration>({
+    title: "MKEMO Synchronized Media Room",
+    platform: "Prime",
+    currentPlaybackTime: 0,
+    totalDuration: 7200,
+    activeStreamUrl: "https://www.primevideo.com",
+    primeVideoId: "g1516087",
+    isPlaybackActive: true,
+    participantCount: 1,
+    qualityPreset: "4K Ultra HD",
   });
 
-  const [messages, setMessages] = useState<Message[]>([
+  const [chatLog, setChatLog] = useState<ChatMessage[]>([
     {
-      id: "1",
-      user: "Host",
-      text: "Welcome to the watch room.",
-      timestamp: "03:10 PM",
-      isMe: true,
-    },
-    {
-      id: "2",
-      user: "Participant",
-      text: "Connection and synchronization are stable.",
-      timestamp: "03:11 PM",
-      isMe: false,
+      id: "sys-1",
+      sender: "MKEMO System",
+      content: "Stream quality locked at Maximum Uncompressed (4K/1080p 60fps).",
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      isSystem: true,
     },
   ]);
 
-  const [inputMsg, setInputMsg] = useState("");
-  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const [inputMessage, setInputMessage] = useState("");
+  const [inputUrlField, setInputUrlField] = useState("");
+  const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    chatScrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatLog]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMsg.trim()) return;
+    if (!inputMessage.trim()) return;
 
-    const newMessage: Message = {
+    const newMsg: ChatMessage = {
       id: Date.now().toString(),
-      user: "Host",
-      text: inputMsg.trim(),
+      sender: "Host",
+      content: inputMessage.trim(),
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      isMe: true,
+      isSystem: false,
     };
 
-    setMessages((prev) => [...prev, newMessage]);
-    setInputMsg("");
+    setChatLog((prev) => [...prev, newMsg]);
+    setInputMessage("");
   };
 
-  const togglePlay = () => {
-    setStats((prev) => ({ ...prev, isPlaying: !prev.isPlaying }));
+  const handleUrlLoad = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputUrlField.trim()) return;
+
+    let targetUrl = inputUrlField.trim();
+
+    if (targetUrl.includes("primevideo.com") || targetUrl.includes("amazon.com")) {
+      const match = targetUrl.match(/g[0-9]+/);
+      const videoId = match ? match[0] : "g1516087";
+      setRoomState((prev) => ({
+        ...prev,
+        platform: "Prime",
+        activeStreamUrl: targetUrl,
+        primeVideoId: videoId,
+      }));
+    } else {
+      setRoomState((prev) => ({
+        ...prev,
+        activeStreamUrl: targetUrl,
+      }));
+    }
+
+    setChatLog((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        sender: "MKEMO System",
+        content: `Media re-initialized with Maximum HD bitrate settings.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isSystem: true,
+      },
+    ]);
+
+    setInputUrlField("");
+    setIsControlPanelOpen(false);
   };
 
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const formatSecondsToClock = (totalSeconds: number): string => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    }
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
   return (
-    <div className="relative w-full h-screen bg-black text-white flex flex-col justify-between overflow-hidden font-sans select-none ltr">
+    <div className="relative w-full h-screen bg-[#050507] text-white flex flex-col justify-between overflow-hidden font-sans select-none ltr">
       
-      {/* Top Header */}
-      <header className="absolute top-0 inset-x-0 z-30 p-4 bg-gradient-to-b from-black/95 via-black/50 to-transparent flex items-center justify-between backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="relative w-11 h-11 rounded-full p-[2px] bg-gradient-to-tr from-[#BB00FF] to-[#FF0090] shadow-lg shadow-purple-500/30">
-            <div className="w-full h-full bg-black/90 rounded-full flex items-center justify-center font-extrabold text-xs tracking-wider text-white">
+      {/* Top Navigation & Quality Indicator */}
+      <header className="absolute top-0 inset-x-0 z-30 px-5 py-3.5 bg-gradient-to-b from-black/95 via-black/60 to-transparent flex items-center justify-between backdrop-blur-md border-b border-white/5">
+        <div className="flex items-center gap-3.5">
+          <div className="relative w-11 h-11 rounded-2xl p-[2px] bg-gradient-to-tr from-[#BB00FF] via-[#FF0090] to-[#7000ff] shadow-xl shadow-purple-600/30">
+            <div className="w-full h-full bg-black rounded-[14px] flex items-center justify-center font-black text-xs tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white to-purple-300">
               MK
             </div>
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-black animate-pulse" />
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-wide text-gray-100">{stats.roomName}</h1>
-            <p className="text-xs text-gray-400 flex items-center gap-1.5 font-medium">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-ping" />
-              {stats.onlineCount} online now
+            <div className="flex items-center gap-2">
+              <h1 className="text-xs font-bold tracking-wide text-gray-100">{roomState.title}</h1>
+              <span className="px-2 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm">
+                {roomState.qualityPreset}
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-400 flex items-center gap-1.5 mt-0.5">
+              <span>{roomState.platform} Mode</span>
+              <span>•</span>
+              <span className="text-emerald-400 font-medium">{roomState.participantCount} Synchronized</span>
             </p>
           </div>
         </div>
 
-        <button className="bg-[#888888]/20 hover:bg-[#888888]/30 border-2 border-[#C4CDE0]/40 rounded-[11px] p-2 transition-all active:scale-90 shadow-lg backdrop-blur-md">
-          <HeadphonesIcon className="w-5 h-5 text-purple-300" />
-        </button>
-      </header>
-
-      {/* Video Player Stage */}
-      <div className="relative w-full h-[52%] bg-black flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-[#212121] via-transparent to-black/70 z-10 pointer-events-none" />
-
-        <img
-          src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000"
-          alt="Stream Preview"
-          className="w-full h-full object-cover opacity-85 scale-105"
-        />
-
-        <div className="absolute z-20 flex items-center justify-center">
+        <div className="flex items-center gap-2">
           <button
-            onClick={togglePlay}
-            className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#BB00FF] to-[#FF0090] text-white flex items-center justify-center shadow-2xl shadow-purple-600/60 transition-transform active:scale-90 hover:scale-105"
+            onClick={() => setIsControlPanelOpen(!isControlPanelOpen)}
+            className="bg-white/10 hover:bg-white/15 border border-white/15 rounded-xl px-3.5 py-2 text-xs font-semibold text-purple-200 transition-all active:scale-95 flex items-center gap-2 shadow-lg backdrop-blur-md"
           >
-            {stats.isPlaying ? (
-              <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-              </svg>
-            ) : (
-              <svg className="w-8 h-8 fill-current translate-x-0.5" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            )}
+            <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span>Media Engine</span>
           </button>
         </div>
+      </header>
 
-        <div className="absolute bottom-3 inset-x-4 z-20 flex items-center gap-3">
-          <span className="text-[11px] font-mono text-gray-300">{formatTime(stats.currentTime)}</span>
-          <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden cursor-pointer relative">
+      {/* Control Panel Modal for URL & Quality Configuration */}
+      {isControlPanelOpen && (
+        <div className="absolute top-20 inset-x-4 z-50 bg-[#121216]/95 border border-purple-500/30 p-4 rounded-3xl shadow-2xl backdrop-blur-2xl animate-in fade-in duration-200">
+          <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-pink-500 animate-ping" />
+              <h2 className="text-xs font-bold text-gray-200 uppercase tracking-wider">High Bitrate Media Control</h2>
+            </div>
+            <button
+              onClick={() => setIsControlPanelOpen(false)}
+              className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+
+          <form onSubmit={handleUrlLoad} className="space-y-3">
+            <label className="text-[10px] font-medium text-gray-400 block">
+              Inject High-Quality Stream URL
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inputUrlField}
+                onChange={(e) => setInputUrlField(e.target.value)}
+                placeholder="Paste Prime / Web / Video Stream Link..."
+                className="flex-1 bg-black/60 text-white text-xs px-3.5 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:border-pink-500 transition-colors"
+              />
+              <button
+                type="submit"
+                className="bg-gradient-to-r from-purple-600 via-pink-600 to-[#FF0090] text-white px-5 py-2.5 rounded-xl font-bold text-xs shrink-0 shadow-lg active:scale-95 transition-transform"
+              >
+                Load Max
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Maximum Resolution Interactive Video Frame */}
+      <div className="relative w-full h-[54%] bg-black flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050507] via-transparent to-black/70 z-10 pointer-events-none" />
+
+        {/* Uncompressed High Resolution Player Window */}
+        <div className="absolute inset-0 w-full h-full bg-black">
+          <iframe
+            src={
+              roomState.platform === "Prime"
+                ? `https://www.primevideo.com`
+                : roomState.activeStreamUrl
+            }
+            title="MKEMO Maximum Quality Stream"
+            className="w-full h-full border-0 opacity-100 image-rendering-crisp transform-gpu"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen; hd"
+            allowFullScreen
+            style={{
+              filter: "contrast(105%) brightness(102%)",
+            }}
+          />
+        </div>
+
+        {/* Stream Progress Bar */}
+        <div className="absolute bottom-3 inset-x-4 z-20 flex items-center gap-3 bg-black/70 backdrop-blur-2xl px-4 py-2.5 rounded-2xl border border-white/10 shadow-2xl">
+          <span className="text-[11px] font-mono font-bold text-pink-400">
+            {formatSecondsToClock(roomState.currentPlaybackTime)}
+          </span>
+          <div className="flex-1 h-2 bg-white/20 rounded-full overflow-hidden cursor-pointer relative group">
             <div
-              className="h-full bg-gradient-to-r from-[#BB00FF] to-[#FF0090] rounded-full transition-all duration-300"
-              style={{ width: `${(stats.currentTime / stats.duration) * 100}%` }}
+              className="h-full bg-gradient-to-r from-purple-600 via-[#BB00FF] to-[#FF0090] rounded-full transition-all duration-300"
+              style={{ width: `${(roomState.currentPlaybackTime / roomState.totalDuration) * 100}%` }}
             />
           </div>
-          <span className="text-[11px] font-mono text-gray-400">{formatTime(stats.duration)}</span>
+          <span className="text-[11px] font-mono text-gray-400">
+            {formatSecondsToClock(roomState.totalDuration)}
+          </span>
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="relative w-full flex-1 bg-[#212121] rounded-t-[20px] z-20 flex flex-col justify-between overflow-hidden border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
-        <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-none">
-          {messages.map((msg) => (
+      {/* Chat & System Log Interface */}
+      <div className="relative w-full flex-1 bg-[#0a0a0e] rounded-t-[28px] z-20 flex flex-col justify-between overflow-hidden border-t border-white/10 shadow-[0_-20px_40px_rgba(0,0,0,0.95)]">
+        
+        {/* Messages Feed */}
+        <div className="flex-1 p-4 overflow-y-auto space-y-3.5 scrollbar-none">
+          {chatLog.map((msg) => (
             <div
               key={msg.id}
-              className={`flex items-end gap-2 ${msg.isMe ? "flex-row-reverse" : "flex-row"}`}
+              className={`flex items-end gap-2.5 ${msg.isSystem ? "justify-center" : "flex-row"}`}
             >
-              <div className="w-8 h-8 rounded-[10px] bg-black/60 border border-white/10 backdrop-blur-md flex items-center justify-center font-bold text-xs text-purple-300 shadow-sm shrink-0">
-                {msg.user[0]}
-              </div>
-
-              <div
-                className={`max-w-[78%] px-3.5 py-2.5 rounded-[16px] text-xs leading-relaxed shadow-md ${
-                  msg.isMe
-                    ? "bg-gradient-to-tr from-[#BB00FF] to-[#FF0090] text-white rounded-br-none"
-                    : "bg-white/10 text-gray-100 backdrop-blur-md rounded-bl-none border border-white/5"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2 mb-1 opacity-70 text-[9px]">
-                  <span className="font-semibold">{msg.user}</span>
-                  <span>{msg.timestamp}</span>
+              {msg.isSystem ? (
+                <div className="px-3.5 py-1 rounded-full bg-purple-950/60 border border-purple-500/30 text-[10px] text-purple-200 font-semibold tracking-wide shadow-sm">
+                  {msg.content}
                 </div>
-                <p className="font-normal">{msg.text}</p>
-              </div>
+              ) : (
+                <>
+                  <div className="w-8 h-8 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center font-bold text-[11px] text-purple-400 shadow-sm shrink-0">
+                    {msg.sender[0]}
+                  </div>
+
+                  <div className="max-w-[80%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-lg bg-zinc-900/90 text-gray-200 rounded-bl-none border border-white/5">
+                    <div className="flex items-center justify-between gap-4 mb-1 opacity-60 text-[9px]">
+                      <span className="font-bold text-purple-300">{msg.sender}</span>
+                      <span>{msg.timestamp}</span>
+                    </div>
+                    <p className="font-normal">{msg.content}</p>
+                  </div>
+                </>
+              )}
             </div>
           ))}
-          <div ref={chatBottomRef} />
+          <div ref={chatScrollRef} />
         </div>
 
+        {/* Input Field */}
         <form
           onSubmit={handleSendMessage}
-          className="p-3 bg-black/50 backdrop-blur-md border-t border-white/5 flex items-center gap-2"
+          className="p-3.5 bg-black/80 backdrop-blur-2xl border-t border-white/10 flex items-center gap-2.5"
         >
           <input
             type="text"
-            value={inputMsg}
-            onChange={(e) => setInputMsg(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 bg-white/5 text-white text-xs px-4 py-3 rounded-[12px] border border-white/10 focus:outline-none focus:border-[#FF0090] transition-colors placeholder:text-gray-500 font-medium"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder="Type message..."
+            className="flex-1 bg-white/5 text-white text-xs px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-pink-500 transition-colors placeholder:text-gray-500 font-medium"
           />
           <button
             type="submit"
-            className="bg-gradient-to-tr from-[#BB00FF] to-[#FF0090] text-white px-5 py-3 rounded-[12px] font-bold text-xs hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-purple-500/25 shrink-0"
+            className="bg-gradient-to-tr from-[#BB00FF] via-[#FF0090] to-purple-600 text-white px-6 py-3 rounded-xl font-bold text-xs hover:opacity-95 active:scale-95 transition-all shadow-lg shadow-purple-600/30 shrink-0"
           >
             Send
           </button>
         </form>
+
       </div>
 
     </div>
