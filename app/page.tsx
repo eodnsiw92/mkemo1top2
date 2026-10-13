@@ -42,6 +42,7 @@ export default function Home() {
     setSystemLogs(prev => [`[${time}] ${text}`, ...prev.slice(0, 30)]);
   }, []);
 
+  const proxyGateways = [
     { name: 'mkemo PythonAnywhere Core', url: 'https://ubnt72.pythonanywhere.com/proxy?url=' },
     { name: 'AllOrigins Raw Gateway', url: 'https://api.allorigins.win/raw?url=' },
     { name: 'CorsProxy Global', url: 'https://corsproxy.io/?' },
@@ -256,25 +257,3 @@ export default function Home() {
               </div>
             </div>
           )}
-
-          {/* Giant Video Box */}
-          <div className="relative w-full aspect-video min-h-[350px] sm:min-h-[500px] lg:min-h-[600px] bg-black rounded-3xl overflow-hidden border border-rose-500/20 shadow-2xl flex items-center justify-center group">
-            {currentSrc ? (
-              <iframe 
-                src={currentSrc} 
-                className="w-full h-full border-0 bg-black" 
-                allowFullScreen 
-                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock allow-popups"
-                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center text-gray-500 text-xs sm:text-sm space-y-4 p-6 text-center">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 text-2xl font-black shadow-2xl">☠</div>
-                <p className="max-w-sm text-gray-400 font-medium">Paste target link above and click Force Hack & Play to execute deep proxy penetration.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Neural Chat */}
-        <div className="w-full lg:col-span-3 bg-[#04060e]/90 border border-white/5 rounded-3xl flex flex-
