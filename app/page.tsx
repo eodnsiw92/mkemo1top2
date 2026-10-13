@@ -1,5 +1,7 @@
-import { WatchRoom } from '@/components/watch-room'
+"use client";
+
+import WatchRoom from "@/components/watch-room";
 
 export default function Page() {
-  return <WatchRoom />
+  return <WatchRoom />;
 }
