@@ -1,8 +1,7 @@
-""use client";
+"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 
-// --- Types & Interfaces ---
 interface Message {
   id: string;
   user: string;
@@ -20,7 +19,6 @@ interface RoomStats {
   duration: number;
 }
 
-// --- Headphone Icon Component (Extracted Vector) ---
 const HeadphonesIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5 text-white" }) => (
   <svg viewBox="0 0 50 50" className={className} fill="currentColor">
     <path d="M43.8,38.1c0,6.3 -2.5,7.9 -6,8.4V29.8C41.3,30.4 43.8,32 43.8,38.1z" />
@@ -35,7 +33,6 @@ const HeadphonesIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5
   </svg>
 );
 
-// --- Main WatchRoom Component ---
 export default function WatchRoom(): React.JSX.Element {
   const [stats, setStats] = useState<RoomStats>({
     roomName: "MKEMO Public Room",
@@ -65,7 +62,6 @@ export default function WatchRoom(): React.JSX.Element {
   const [inputMsg, setInputMsg] = useState<string>("");
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // Auto Scroll Chat
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -98,8 +94,6 @@ export default function WatchRoom(): React.JSX.Element {
 
   return (
     <div className="relative w-full h-screen bg-black text-white flex flex-col justify-between overflow-hidden font-sans select-none dir-rtl">
-      
-      {/* 1. Header Section - Gradient & Controls */}
       <header className="absolute top-0 inset-x-0 z-30 p-4 bg-gradient-to-b from-black/95 via-black/50 to-transparent flex items-center justify-between backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <div className="relative w-11 h-11 rounded-full p-[2px] bg-gradient-to-tr from-[#BB00FF] to-[#FF0090] shadow-lg shadow-purple-500/30">
@@ -117,15 +111,12 @@ export default function WatchRoom(): React.JSX.Element {
           </div>
         </div>
 
-        {/* Custom Purple Button Selector style */}
         <button className="bg-[#888888]/20 hover:bg-[#888888]/30 border-2 border-[#C4CDE0]/40 rounded-[11px] p-2 transition-all active:scale-90 shadow-lg backdrop-blur-md">
           <HeadphonesIcon className="w-5 h-5 text-purple-300" />
         </button>
       </header>
 
-      {/* 2. Media Player Stage */}
       <div className="relative w-full h-[52%] bg-black flex items-center justify-center overflow-hidden">
-        {/* Scrim Background Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#212121] via-transparent to-black/70 z-10 pointer-events-none" />
 
         <img
@@ -134,7 +125,6 @@ export default function WatchRoom(): React.JSX.Element {
           className="w-full h-full object-cover opacity-85 scale-105"
         />
 
-        {/* Central Play/Pause Action Button */}
         <div className="absolute z-20 flex items-center justify-center">
           <button
             onClick={togglePlay}
@@ -152,7 +142,6 @@ export default function WatchRoom(): React.JSX.Element {
           </button>
         </div>
 
-        {/* Custom Rave XML Progress Bar */}
         <div className="absolute bottom-3 inset-x-4 z-20 flex items-center gap-3">
           <span className="text-[11px] font-mono text-gray-300">{formatTime(stats.currentTime)}</span>
           <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden cursor-pointer relative">
@@ -165,22 +154,17 @@ export default function WatchRoom(): React.JSX.Element {
         </div>
       </div>
 
-      {/* 3. Bottom Sheet Chat Area (Rounded Top 20.0dip) */}
       <div className="relative w-full flex-1 bg-[#212121] rounded-t-[20px] z-20 flex flex-col justify-between overflow-hidden border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
-        
-        {/* Chat Stream */}
         <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-none">
           {messages.map((msg) => (
             <div
               key={msg.id}
               className={`flex items-end gap-2 ${msg.isMe ? "flex-row-reverse" : "flex-row"}`}
             >
-              {/* Profile Box Avatar */}
               <div className="w-8 h-8 rounded-[10px] bg-black/60 border border-white/10 backdrop-blur-md flex items-center justify-center font-bold text-xs text-purple-300 shadow-sm shrink-0">
                 {msg.user[0]}
               </div>
 
-              {/* Message Bubble */}
               <div
                 className={`max-w-[78%] px-3.5 py-2.5 rounded-[16px] text-xs leading-relaxed shadow-md ${
                   msg.isMe
@@ -199,7 +183,6 @@ export default function WatchRoom(): React.JSX.Element {
           <div ref={chatBottomRef} />
         </div>
 
-        {/* Input Bar */}
         <form
           onSubmit={handleSendMessage}
           className="p-3 bg-black/50 backdrop-blur-md border-t border-white/5 flex items-center gap-2"
@@ -208,7 +191,7 @@ export default function WatchRoom(): React.JSX.Element {
             type="text"
             value={inputMsg}
             onChange={(e) => setInputMsg(e.target.value)}
-            placeholder="اكتب رسالة في غرفتك..."
+            placeholder="اكتب رسالة  ..."
             className="flex-1 bg-white/5 text-white text-xs px-4 py-3 rounded-[12px] border border-white/10 focus:outline-none focus:border-[#FF0090] transition-colors placeholder:text-gray-500 font-medium"
           />
           <button
@@ -218,7 +201,6 @@ export default function WatchRoom(): React.JSX.Element {
             إرسال
           </button>
         </form>
-
       </div>
     </div>
   );
