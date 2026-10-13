@@ -5,7 +5,6 @@ import React, { useState, useRef, useEffect } from "react";
 interface Message {
   id: string;
   user: string;
-  avatar?: string;
   text: string;
   timestamp: string;
   isMe: boolean;
@@ -33,9 +32,9 @@ const HeadphonesIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5
   </svg>
 );
 
-export default function WatchRoom(): React.JSX.Element {
+export default function WatchRoom() {
   const [stats, setStats] = useState<RoomStats>({
-    roomName: "MKEMO Public Room",
+    roomName: "Public Watch Room",
     onlineCount: 2,
     isPlaying: true,
     currentTime: 142,
@@ -45,21 +44,21 @@ export default function WatchRoom(): React.JSX.Element {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      user: "مصطفى",
-      text: "أهلاً بالجميع في MKEMO! 🔥",
+      user: "Host",
+      text: "Welcome to the watch room.",
       timestamp: "03:10 PM",
       isMe: true,
     },
     {
       id: "2",
-      user: "Guest_99",
-      text: "الواجهة خرافية وسريعة جداً!",
+      user: "Participant",
+      text: "Connection and synchronization are stable.",
       timestamp: "03:11 PM",
       isMe: false,
     },
   ]);
 
-  const [inputMsg, setInputMsg] = useState<string>("");
+  const [inputMsg, setInputMsg] = useState("");
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,7 +71,7 @@ export default function WatchRoom(): React.JSX.Element {
 
     const newMessage: Message = {
       id: Date.now().toString(),
-      user: "مصطفى",
+      user: "Host",
       text: inputMsg.trim(),
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       isMe: true,
@@ -93,7 +92,9 @@ export default function WatchRoom(): React.JSX.Element {
   };
 
   return (
-    <div className="relative w-full h-screen bg-black text-white flex flex-col justify-between overflow-hidden font-sans select-none dir-rtl">
+    <div className="relative w-full h-screen bg-black text-white flex flex-col justify-between overflow-hidden font-sans select-none ltr">
+      
+      {/* Top Header */}
       <header className="absolute top-0 inset-x-0 z-30 p-4 bg-gradient-to-b from-black/95 via-black/50 to-transparent flex items-center justify-between backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <div className="relative w-11 h-11 rounded-full p-[2px] bg-gradient-to-tr from-[#BB00FF] to-[#FF0090] shadow-lg shadow-purple-500/30">
@@ -106,7 +107,7 @@ export default function WatchRoom(): React.JSX.Element {
             <h1 className="text-sm font-bold tracking-wide text-gray-100">{stats.roomName}</h1>
             <p className="text-xs text-gray-400 flex items-center gap-1.5 font-medium">
               <span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-ping" />
-              {stats.onlineCount} متصلين الآن
+              {stats.onlineCount} online now
             </p>
           </div>
         </div>
@@ -116,12 +117,13 @@ export default function WatchRoom(): React.JSX.Element {
         </button>
       </header>
 
+      {/* Video Player Stage */}
       <div className="relative w-full h-[52%] bg-black flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-[#212121] via-transparent to-black/70 z-10 pointer-events-none" />
 
         <img
           src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000"
-          alt="Watch Stream"
+          alt="Stream Preview"
           className="w-full h-full object-cover opacity-85 scale-105"
         />
 
@@ -154,6 +156,7 @@ export default function WatchRoom(): React.JSX.Element {
         </div>
       </div>
 
+      {/* Chat Area */}
       <div className="relative w-full flex-1 bg-[#212121] rounded-t-[20px] z-20 flex flex-col justify-between overflow-hidden border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
         <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-none">
           {messages.map((msg) => (
@@ -191,17 +194,18 @@ export default function WatchRoom(): React.JSX.Element {
             type="text"
             value={inputMsg}
             onChange={(e) => setInputMsg(e.target.value)}
-            placeholder="اكتب رسالة  ..."
+            placeholder="Type a message..."
             className="flex-1 bg-white/5 text-white text-xs px-4 py-3 rounded-[12px] border border-white/10 focus:outline-none focus:border-[#FF0090] transition-colors placeholder:text-gray-500 font-medium"
           />
           <button
             type="submit"
             className="bg-gradient-to-tr from-[#BB00FF] to-[#FF0090] text-white px-5 py-3 rounded-[12px] font-bold text-xs hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-purple-500/25 shrink-0"
           >
-            إرسال
+            Send
           </button>
         </form>
       </div>
+
     </div>
   );
 }
