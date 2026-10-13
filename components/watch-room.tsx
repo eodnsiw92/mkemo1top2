@@ -15,20 +15,21 @@ export default function WatchRoom() {
   const [inputUrl, setInputUrl] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
+  const [isMicActive, setIsMicActive] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       sender: "A~:",
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
-      content: "Welcome to the watch party!",
+      content: "Welcome to MKEMO Watch Room!",
       isHost: true,
     },
     {
       id: "2",
       sender: "System",
       avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100",
-      content: "Now Playing: Stream Video",
+      content: "Stream synchronized successfully.",
     },
   ]);
 
@@ -75,17 +76,17 @@ export default function WatchRoom() {
   return (
     <div className="relative w-full h-screen bg-black text-white flex flex-col justify-between overflow-hidden font-sans select-none ltr">
       
-      {/* 1. Rave Top Gradient Header */}
+      {/* 1. Rave Top Blue Bar */}
       <header className="absolute top-0 inset-x-0 z-30 px-4 py-3 bg-gradient-to-r from-[#0088ff] via-[#0055ff] to-[#0099ff] flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
-          <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="text-white hover:opacity-80">
+          <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="text-white hover:opacity-80 active:scale-90 transition-transform">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </button>
         </div>
 
-        {/* MKEMO Logo Style */}
+        {/* MKEMO Brand */}
         <h1 className="text-2xl font-black tracking-tighter italic text-white drop-shadow-md">
           MKEMO
         </h1>
@@ -96,7 +97,7 @@ export default function WatchRoom() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
             <span className="absolute -top-1 -right-1 bg-cyan-400 text-black text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center">
-              2
+              1
             </span>
           </div>
         </div>
@@ -115,7 +116,7 @@ export default function WatchRoom() {
             />
             <button
               type="submit"
-              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-4 py-2 rounded-xl font-bold text-xs"
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-4 py-2 rounded-xl font-bold text-xs active:scale-95 transition-transform"
             >
               Play
             </button>
@@ -123,7 +124,7 @@ export default function WatchRoom() {
         </div>
       )}
 
-      {/* 2. Video Player Section */}
+      {/* 2. Video Stage Section */}
       <div className="relative w-full h-[38%] bg-black mt-12 flex items-center justify-center z-10 shadow-xl">
         <iframe
           src={videoUrl}
@@ -134,10 +135,10 @@ export default function WatchRoom() {
         />
       </div>
 
-      {/* 3. Rave Floating Ambient Chat Area */}
+      {/* 3. Rave Ambient Chat & Background Container */}
       <div className="relative w-full flex-1 bg-gradient-to-b from-[#2a1b18] via-[#8d4229] to-[#d36b37] flex flex-col justify-between overflow-hidden">
         
-        {/* Messages Feed Floating Over Ambient Background */}
+        {/* Floating Messages Area */}
         <div className="flex-1 p-4 overflow-y-auto space-y-4 scrollbar-none flex flex-col justify-end">
           {messages.map((msg) => (
             <div key={msg.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
@@ -160,18 +161,23 @@ export default function WatchRoom() {
           <div ref={chatBottomRef} />
         </div>
 
-        {/* 4. Rave Bottom Floating Controls Bar */}
+        {/* 4. Rave Bottom Toolbar with Mic Button */}
         <div className="p-3 bg-black/20 backdrop-blur-md flex items-center justify-between gap-2 border-t border-white/10">
           
           {/* Microphone Circular Button */}
-          <button className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg active:scale-90 transition-transform shrink-0">
-            <svg className="w-6 h-6 text-zinc-900" fill="currentColor" viewBox="0 0 24 24">
+          <button
+            onClick={() => setIsMicActive(!isMicActive)}
+            className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all shrink-0 ${
+              isMicActive ? "bg-red-600 text-white animate-pulse" : "bg-white text-black"
+            }`}
+          >
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
               <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
             </svg>
           </button>
 
-          {/* Quick Input Bar */}
+          {/* Chat Field */}
           <form onSubmit={handleSendMessage} className="flex-1 flex items-center gap-2">
             <input
               type="text"
@@ -182,7 +188,7 @@ export default function WatchRoom() {
             />
           </form>
 
-          {/* Action Icons */}
+          {/* Action Tools */}
           <div className="flex items-center gap-2 text-white/80 shrink-0">
             <button className="p-2 hover:text-white">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
