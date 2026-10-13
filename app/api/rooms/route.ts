@@ -1,75 +1,114 @@
-import { and, asc, count, desc, eq, gt, inArray } from 'drizzle-orm'
-import { randomBytes, randomUUID } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
+import { desc, eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { roomEvents, roomMembers, rooms } from '@/lib/db/schema'
-import { cleanMessage, containsProhibitedSearch } from '@/lib/content-safety'
-import { getGuestId, guestDisplayName, hashInviteToken } from '@/lib/guest-session'
-import { countryFlagFromAcceptLanguage, withCountryFlag } from '@/lib/country'
+import { rooms } from '@/lib/db/schema'
+import { getGuestId } from '@/lib/guest-session'
 import { isSameOriginRequest } from '@/lib/request-origin'
 
-const sources = new Set(['YouTube', 'Netflix', 'Prime Video', 'Disney+', 'Twitch'])
+export const dynamic = 'force-static'
 
-export async function GET() {
-  const activeSince = new Date(Date.now() - 45_000)
-  const publicRooms = await db.select({
-    id: rooms.id,
-    title: rooms.title,
-    source: rooms.source,
-    isPublic: rooms.isPublic,
-    mediaUrl: rooms.mediaUrl,
-    updatedAt: rooms.updatedAt,
-    viewers: count(roomMembers.guestId),
-  }).from(rooms)
-    .leftJoin(roomMembers, and(eq(roomMembers.roomId, rooms.id), gt(roomMembers.lastSeenAt, activeSince)))
-    .where(eq(rooms.isPublic, true))
-    .groupBy(rooms.id)
-    .orderBy(desc(rooms.updatedAt))
-    .limit(40)
+/**
+ * GET: استرجاع قائمة الغرف المتاحة للمستخدم (أو الغرف النشطة مؤخراً)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json(
+        { error: 'Cross-origin request denied.' },
+        { status: 403 }
+      )
+    }
 
-  const roomIds = publicRooms.map((room) => room.id)
-  const activeMembers = roomIds.length > 0
-    ? await db.select({ roomId: roomMembers.roomId, guestId: roomMembers.guestId, displayName: roomMembers.displayName })
-      .from(roomMembers)
-      .where(and(inArray(roomMembers.roomId, roomIds), gt(roomMembers.lastSeenAt, activeSince)))
-      .orderBy(asc(roomMembers.joinedAt))
-    : []
-  const membersByRoom = new Map<string, typeof activeMembers>()
-  for (const member of activeMembers) {
-    const roomMembers = membersByRoom.get(member.roomId) ?? []
-    if (roomMembers.length < 4) roomMembers.push(member)
-    membersByRoom.set(member.roomId, roomMembers)
+    const guestId = await getGuestId()
+
+    // جلب أحدث 50 غرفة تم إنشاؤها أو التفاعل معها للمزامنة الجماعية
+    const activeRooms = await db
+      .select()
+      .from(rooms)
+      .orderBy(desc(rooms.updatedAt))
+      .limit(50)
+
+    return NextResponse.json(
+      { 
+        rooms: activeRooms,
+        currentGuestId: guestId 
+      },
+      {
+        status: 200,
+        headers: { 'Cache-Control': 'no-store, max-age=0' },
+      }
+    )
+  } catch (error) {
+    console.error('Error fetching rooms list:', error)
+    return NextResponse.json(
+      { error: 'Failed to retrieve rooms.' },
+      { status: 500 }
+    )
   }
-
-  return NextResponse.json({ rooms: publicRooms.map((room) => ({
-    ...room,
-    members: membersByRoom.get(room.id) ?? [],
-  })) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
+/**
+ * POST: إنشاء غرفة مشاهدة جماعية جديدة (Watch Party Room)
+ */
 export async function POST(request: NextRequest) {
-  if (!isSameOriginRequest(request)) return NextResponse.json({ error: 'Cross-origin request denied.' }, { status: 403 })
-  let payload: unknown
-  try { payload = await request.json() } catch { return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 }) }
-  if (!payload || typeof payload !== 'object') return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
+  try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json(
+        { error: 'Cross-origin request denied.' },
+        { status: 403 }
+      )
+    }
 
-  const input = payload as { source?: unknown; isPublic?: unknown; displayName?: unknown }
-  const title = 'Watch together'
-  const source = typeof input.source === 'string' && sources.has(input.source) ? input.source : ''
-  if (!source) return NextResponse.json({ error: 'Choose a supported video source.' }, { status: 400 })
+    const guestId = await getGuestId()
+    let roomName = 'Watch Party Room'
+    let initialMediaUrl = null
 
-  const guestId = await getGuestId()
-  const id = randomUUID()
-  const inviteToken = randomBytes(24).toString('base64url')
-  const displayName = typeof input.displayName === 'string' ? cleanMessage(input.displayName).slice(0, 32) : ''
-  const name = withCountryFlag(displayName || guestDisplayName(guestId), countryFlagFromAcceptLanguage(request.headers.get('accept-language')))
-  const isPublic = input.isPublic === true
+    try {
+      const body = await request.json()
+      if (typeof body?.name === 'string' && body.name.trim().length > 0) {
+        roomName = body.name.trim().slice(0, 100)
+      }
+      if (typeof body?.mediaUrl === 'string' && body.mediaUrl.trim().length > 0) {
+        initialMediaUrl = body.mediaUrl.trim()
+      }
+    } catch {
+      // استخدام القيم الافتراضية إذا لم يتم إرسال جسم طلب (Body)
+    }
 
-  await db.transaction(async (tx) => {
-    await tx.insert(rooms).values({ id, ownerId: guestId, title, source, isPublic, inviteTokenHash: hashInviteToken(inviteToken) })
-    await tx.insert(roomMembers).values({ roomId: id, guestId, displayName: name, isHost: true })
-    await tx.insert(roomEvents).values({ id: randomUUID(), roomId: id, guestId, displayName: name, eventType: 'joined' })
-  })
+    // توليد معرف فريد وآمن للغرفة
+    const roomId = randomBytes(8).toString('hex')
 
-  return NextResponse.json({ room: { id, title, source, isPublic }, inviteToken }, { status: 201, headers: { 'Cache-Control': 'no-store' } })
+    // إدخال الغرفة الجديدة في قاعدة البيانات وتعيين المضيف (Owner)
+    const [newRoom] = await db
+      .insert(rooms)
+      .values({
+        id: roomId,
+        name: roomName,
+        ownerId: guestId,
+        currentMediaUrl: initialMediaUrl,
+        isPlaying: false,
+        playbackPosition: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning()
+
+    return NextResponse.json(
+      {
+        message: 'Room created successfully.',
+        room: newRoom,
+      },
+      {
+        status: 201,
+        headers: { 'Cache-Control': 'no-store, max-age=0' },
+      }
+    )
+  } catch (error) {
+    console.error('Error creating room:', error)
+    return NextResponse.json(
+      { error: 'Failed to create room.' },
+      { status: 500 }
+    )
+  }
 }
